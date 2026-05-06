@@ -1,0 +1,390 @@
+create or replace FUNCTION func_calculate_years(p_emp_id NUMBER)
+RETURN NUMBER
+IS
+    v_years NUMBER;
+BEGIN
+    SELECT FLOOR(MONTHS_BETWEEN(SYSDATE, HIREDATE)/12);
+    INTO v_years
+    FROM EMP
+    WHERE EMP_ID = p_emp_id;
+    RETURN v_years;
+END;
+/
+create or replace FUNCTION func_summ(num11 IN NUMBER, num22 IN NUMBER)
+RETURN NUMBER IS
+BEGIN 
+    RETURN num11 + num22;
+END;
+/
+create or replace FUNCTION system_user_auth (
+    p_username IN VARCHAR2,
+    p_password IN VARCHAR2
+)
+RETURN BOOLEAN
+AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM system_user su
+    LEFT JOIN trader t
+        ON t.user_id = su.user_id
+    WHERE LOWER(su.email) = LOWER(p_username)
+      AND su.password = p_password
+      AND (
+            t.user_id IS NULL
+            OR NVL(t.status, 'ACTIVE') = 'ACTIVE'
+          );
+
+    RETURN v_count = 1;
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  CREATE UNIQUE INDEX "SYS_C00195074739" ON "ORDER_ITEM" ("ORDER_ITEM_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074764" ON "REVIEW" ("REVIEW_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074243" ON "CUSTOMER" ("USER_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074533" ON "TRADER" ("USER_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074696" ON "CART_ITEM" ("CART_ITEM_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074700" ON "ORDERS" ("ORDER_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074769" ON "PRODUCT_DISCOUNT" ("PRODUCT_ID", "DISCOUNT_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00194471706" ON "ORDER" ("ORDER_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074691" ON "CART" ("CART_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074760" ON "PAYMENT" ("PAYMENT_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074767" ON "DISCOUNT" ("DISCOUNT_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074392" ON "CATEGORY" ("CATEGORY_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195073693" ON "SYSTEM_USER" ("EMAIL") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195073692" ON "SYSTEM_USER" ("USER_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074749" ON "PAYMENT_METHOD" ("METHOD_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074251" ON "ADMIN" ("USER_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074527" ON "SHOP" ("SHOP_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074699" ON "COLLECTION_SLOT" ("SLOT_ID") 
+  ;
+
+  CREATE UNIQUE INDEX "SYS_C00195074537" ON "PRODUCT" ("PRODUCT_ID") 
+  ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+create or replace PROCEDURE CHECK_TRADER_STATUS AS
+    v_status trader.status%TYPE;
+BEGIN
+    SELECT NVL(t.status, 'ACTIVE')
+    INTO v_status
+    FROM system_user su
+    JOIN trader t
+        ON su.user_id = t.user_id
+    WHERE LOWER(su.email) = LOWER(apex_application.g_user);
+
+    IF v_status = 'SUSPENDED' THEN
+        raise_application_error(-20001, 'Your trader account is suspended.');
+    END IF;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        NULL;
+    WHEN TOO_MANY_ROWS THEN
+        NULL;
+END;
+/
+create or replace PROCEDURE delete_emp(p_emp_id IN NUMBER)
+IS 
+BEGIN
+    DELETE FROM EMP
+    WHERE empno = p_emp_id;
+END;
+/
+create or replace PROCEDURE func_sum(num1 IN NUMBER, num2 IN NUMBER)
+RETURN NUMBER IS
+BEGIN 
+    RETURN num1 + num2;
+END;
+/
+create or replace PROCEDURE proc_display(v_name OUT VARCHAR2)
+IS
+BEGIN
+    v_name:='NIKITA';
+END;
+/
+create or replace PROCEDURE proc_hire(
+    p_empno  NUMBER,
+    p_ename  VARCHAR2
+)
+IS
+BEGIN
+    INSERT INTO emp(empno, ename)
+    VALUES (p_empno, p_ename);
+
+    DBMS_OUTPUT.PUT_LINE('Employee ' || p_ename || ' hired successfully.');
+END;
+/
+create or replace PROCEDURE proc_sum(num 1 IN NUMBER, mun 2 IN NUMBER)
+RETURN NUMBER IS
+BEGIN 
+    RETURN num1 + num2;
+END;
+/
+create or replace PROCEDURE proc_update
+IS
+BEGIN
+    UPDATE EMP
+    SET SAL = SAL * 1.10
+    WHEERE FLOOR(MONTHS_BETWEEEN(sysdate, hiredate) / 12) > 35;
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Salary updsated for employees with more than 35 years of service');
+
+    EXCEPTION
+    WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('Error:' || SQLERRM);
+    ROLLBACK;
+END;
+/
+create or replace PROCEDURE proc_updatesalary
+IS
+BEGIN
+    UPDATE EMP
+    SET SAL = SAL + 1000
+    WHERE FLOOR(MONTHS_BETWEEEN(sysdate, hiredate) / 12) > 10;
+        DBMS_OUTPUT.PUT_LINE( 'rows updated');
+END;
+/
+create or replace PROCEDURE proc_update_salary IS
+BEGIN
+    UPDATE emp
+    SET sal = sal * 1.10  
+    WHERE FLOOR(MONTHS_BETWEEN(SYSDATE, hiredate) / 12) > 15;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Salary updated for employees with more than 35 years of service.');
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error:' || SQLERRM);
+        ROLLBACK;
+END;
+/
+create or replace PROCEDURE sum_two_nums(AA IN NUMBER, B IN NUMBER, RESULT OUT NUMBER)
+IS 
+BEGIN
+    RESULT:= AA + B;
+END;
+/
+create or replace PROCEDURE UPDATE_SALARY 
+IS 
+v_count NUMBER; 
+BEGIN 
+UPDATE EMP 
+SET SAL = SAL + 2000 
+WHERE FLOOR(MONTHS_BETWEEN(SYSDATE, HIREDATE) / 12) > 10; DBMS_OUTPUT.PUT_LINE(v_count || 'rows updated.'); 
+END;
+/
+create or replace PROCEDURE UPDATE_SALARY_15
+IS
+    v_count NUMBER;
+BEGIN
+    UPDATE EMP
+    SET SAL = SAL + 5000
+    WHERE FLOOR(MONTHS_BETWEEN(SYSDATE, HIREDATE) / 12) > 10;
+
+    DBMS_OUTPUT.PUT_LINE(v_count || 'rows updated.');
+END;
+/
+
+
+
+
+
+
+
+
+
+   CREATE SEQUENCE  "CART_ITEM_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 113 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+   CREATE SEQUENCE  "CART_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+   CREATE SEQUENCE  "ORDER_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 52 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+   CREATE SEQUENCE  "PAYMENT_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 52 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+   CREATE SEQUENCE  "PRODUCTS_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 79 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+   CREATE SEQUENCE  "SEQ_SYSTEM_USER"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 21 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+   CREATE SEQUENCE  "SEQ_TESTTABLE"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 180 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+   CREATE SEQUENCE  "SYSTEM_USER_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 120 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
