@@ -80,6 +80,7 @@ $_SESSION['user_id'] = $user['USER_ID'];
 $_SESSION['user_name'] = $user['NAME'];
 $_SESSION['email'] = $user['EMAIL'];
 $_SESSION['role'] = 'customer';
+$_SESSION['flash_success'] = 'Logged in successfully.';
 
 header('Location: index.php');
 exit;

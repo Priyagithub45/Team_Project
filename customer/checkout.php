@@ -1,0 +1,210 @@
+<?php
+include '../db.php';
+include 'auth_check.php';
+
+$user_id = (string)(int)$_SESSION['user_id'];
+
+// Guard: slot must be selected
+if (empty($_SESSION['selected_slot_id'])) {
+    header('Location: collection-slot.php');
+    exit;
+}
+$slot_id = (string)(int)$_SESSION['selected_slot_id'];
+
+// ── Cart items for this user ──────────────────────────────────────────────────
+$sql_cart = "SELECT ci.CART_ITEM_ID, ci.QUANTITY, ci.PRICE,
+                    (ci.QUANTITY * ci.PRICE) AS LINE_TOTAL,
+                    p.PRODUCT_NAME, s.SHOP_NAME
+             FROM CART_ITEM ci
+             JOIN CART c    ON ci.CART_ID    = c.CART_ID
+             JOIN PRODUCT p ON ci.PRODUCT_ID = p.PRODUCT_ID
+             JOIN SHOP s    ON p.SHOP_ID     = s.SHOP_ID
+             WHERE c.CUSTOMER_ID = :p_uid AND c.STATUS = 'Active'
+             ORDER BY s.SHOP_NAME, p.PRODUCT_NAME";
+$stmt = oci_parse($conn, $sql_cart);
+oci_bind_by_name($stmt, ':p_uid', $user_id);
+oci_execute($stmt);
+
+$items      = [];
+$cart_total = 0.0;
+while ($row = oci_fetch_assoc($stmt)) {
+    $items[]     = $row;
+    $cart_total += (float)$row['LINE_TOTAL'];
+}
+oci_free_statement($stmt);
+
+// Guard: cart must not be empty
+if (empty($items)) {
+    header('Location: cart.php');
+    exit;
+}
+
+// ── Slot details ──────────────────────────────────────────────────────────────
+$stmt = oci_parse($conn, "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION
+                           FROM COLLECTION_SLOT WHERE SLOT_ID = :p_sid");
+oci_bind_by_name($stmt, ':p_sid', $slot_id);
+oci_execute($stmt);
+$slot = oci_fetch_assoc($stmt);
+oci_free_statement($stmt);
+
+if (!$slot) {
+    // Slot no longer valid
+    unset($_SESSION['selected_slot_id']);
+    header('Location: collection-slot.php');
+    exit;
+}
+
+// ── User details ──────────────────────────────────────────────────────────────
+$stmt = oci_parse($conn, "SELECT NAME, EMAIL, ADDRESS, PHONE_NO
+                           FROM SYSTEM_USER WHERE USER_ID = :p_uid");
+oci_bind_by_name($stmt, ':p_uid', $user_id);
+oci_execute($stmt);
+$user = oci_fetch_assoc($stmt);
+oci_free_statement($stmt);
+
+// ── Payment methods ───────────────────────────────────────────────────────────
+$stmt = oci_parse($conn, "SELECT METHOD_ID, METHOD_NAME FROM PAYMENT_METHOD ORDER BY METHOD_NAME");
+oci_execute($stmt);
+$methods = [];
+while ($row = oci_fetch_assoc($stmt)) {
+    $methods[] = $row;
+}
+oci_free_statement($stmt);
+
+// ── Flash error from place_order.php ─────────────────────────────────────────
+$order_error = '';
+if (!empty($_SESSION['order_error'])) {
+    $order_error = $_SESSION['order_error'];
+    unset($_SESSION['order_error']);
+}
+
+// ── Bucket cart items by shop ─────────────────────────────────────────────────
+$by_shop = [];
+foreach ($items as $item) {
+    $shop = $item['SHOP_NAME'];
+    if (!isset($by_shop[$shop])) $by_shop[$shop] = [];
+    $by_shop[$shop][] = $item;
+}
+
+$page_title = 'Checkout - Cleckhuddesfax Online Mart';
+include 'header.php';
+?>
+
+<section class="invoice-page">
+    <div class="container container-narrow">
+        <div class="invoice-box">
+
+            <div class="invoice-header">
+                <h2>CHECKOUT</h2>
+            </div>
+
+            <?php if ($order_error): ?>
+            <div style="background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;">
+                <?php echo htmlspecialchars($order_error); ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Customer Details (read-only) -->
+            <div class="invoice-customer">
+                <h4>YOUR DETAILS</h4>
+                <p>
+                    <strong>Name:</strong> <?php echo htmlspecialchars($user['NAME'] ?? ''); ?><br>
+                    <strong>Email:</strong> <?php echo htmlspecialchars($user['EMAIL'] ?? ''); ?><br>
+                    <strong>Phone:</strong> <?php echo htmlspecialchars($user['PHONE_NO'] ?? 'Not provided'); ?><br>
+                    <strong>Address:</strong> <?php echo htmlspecialchars($user['ADDRESS'] ?? 'Not provided'); ?>
+                </p>
+            </div>
+
+            <!-- Collection Slot Summary -->
+            <div class="invoice-customer" style="margin-top:1rem;">
+                <h4>COLLECTION SLOT</h4>
+                <p>
+                    <strong>Date:</strong> <?php echo date('l, d M Y', strtotime(substr($slot['COLLECTION_DATE'], 0, 10))); ?><br>
+                    <strong>Time:</strong> <?php echo htmlspecialchars($slot['COLLECTION_TIME']); ?><br>
+                    <strong>Location:</strong> <?php echo htmlspecialchars($slot['LOCATION']); ?>
+                </p>
+                <a href="collection-slot.php" style="font-size:0.85rem;color:#f97316;">Change slot</a>
+            </div>
+
+            <!-- Order Summary -->
+            <h4 class="invoice-table-title" style="margin-top:1.5rem;">ORDER SUMMARY</h4>
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>PRODUCT</th>
+                        <th>QTY</th>
+                        <th>UNIT PRICE</th>
+                        <th>SUBTOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($by_shop as $shop_name => $shop_items): ?>
+                    <tr>
+                        <td colspan="4" style="background:#f9f9f9;font-weight:600;color:#f97316;padding:0.4rem 0.75rem;">
+                            <?php echo htmlspecialchars(strtoupper($shop_name)); ?>
+                        </td>
+                    </tr>
+                    <?php foreach ($shop_items as $item): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($item['PRODUCT_NAME']); ?></td>
+                        <td><?php echo (int)$item['QUANTITY']; ?></td>
+                        <td>£<?php echo number_format((float)$item['PRICE'], 2); ?></td>
+                        <td><strong>£<?php echo number_format((float)$item['LINE_TOTAL'], 2); ?></strong></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <!-- Totals -->
+            <div class="invoice-totals">
+                <div class="invoice-total-row grand-total-row">
+                    <span>TOTAL TO PAY:</span>
+                    <span>£<?php echo number_format($cart_total, 2); ?></span>
+                </div>
+            </div>
+
+            <!-- Place Order Form -->
+            <form method="post" action="place_order.php" style="margin-top:1.5rem;">
+
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block;font-weight:600;margin-bottom:0.4rem;">PAYMENT METHOD</label>
+                    <?php if (empty($methods)): ?>
+                        <input type="hidden" name="method_id" value="0">
+                        <p style="color:#888;font-size:0.9rem;">Payment on collection (cash).</p>
+                    <?php else: ?>
+                        <select name="method_id" required
+                                style="width:100%;padding:0.6rem;border:1px solid #ddd;border-radius:4px;font-family:inherit;">
+                            <option value="">— Select payment method —</option>
+                            <?php foreach ($methods as $m): ?>
+                            <option value="<?php echo (int)$m['METHOD_ID']; ?>">
+                                <?php echo htmlspecialchars($m['METHOD_NAME']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+                </div>
+
+                <button type="submit" class="btn-confirm"
+                        style="width:100%;padding:0.9rem;font-size:1rem;margin-top:0.5rem;">
+                    PLACE ORDER
+                </button>
+
+            </form>
+
+            <form method="post" action="paypal_start.php" style="margin-top:0.75rem;">
+                <button type="submit" class="btn-confirm"
+                        style="width:100%;padding:0.9rem;font-size:1rem;background:#ffc439;color:#111;border-color:#ffc439;">
+                    PAY WITH PAYPAL SANDBOX
+                </button>
+            </form>
+
+            <p style="text-align:center;margin-top:0.75rem;">
+                <a href="cart.php" style="color:#888;font-size:0.85rem;">← Back to cart</a>
+            </p>
+
+        </div>
+    </div>
+</section>
+
+<?php include 'footer.php'; ?>

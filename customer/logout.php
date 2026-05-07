@@ -18,6 +18,10 @@ if (ini_get('session.use_cookies')) {
     );
 }
 
+session_start();
+session_regenerate_id(true);
+$_SESSION['flash_success'] = 'Logged out successfully.';
+
 header('Location: login.php');
 exit;
 ?>

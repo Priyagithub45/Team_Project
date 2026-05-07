@@ -6,13 +6,14 @@
 
 $page_title = 'Login';
 include '../db.php';
-include 'header.php';
 
 // If already logged in, send to home
 if (isset($_SESSION['user_id'])) {
     header('Location: index.php');
     exit;
 }
+
+include 'header.php';
 
 $errors  = $_SESSION['login_errors']  ?? [];
 $old     = $_SESSION['login_old']     ?? ['email' => ''];

@@ -9,22 +9,8 @@
 // -------------------------------------------------------
 // Start session — needed to check if the user is logged in
 // -------------------------------------------------------
-session_start();
-
-// -------------------------------------------------------
-// SECURITY CHECK: If the user is NOT logged in, redirect to login.
-// $_SESSION['user_id'] is set when a user logs in successfully.
-// If it doesn't exist, they haven't logged in yet.
-// -------------------------------------------------------
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// -------------------------------------------------------
-// Connect to the Oracle database
-// -------------------------------------------------------
-include 'db.php';
+include '../db.php';
+include 'auth_check.php';
 
 // -------------------------------------------------------
 // STEP 1: Get the logged-in user's ID from the session
@@ -34,9 +20,9 @@ $user_id = $_SESSION['user_id'];
 // -------------------------------------------------------
 // STEP 2: Fetch the user's details from SYSTEM_USER table
 // -------------------------------------------------------
-$user_sql  = "SELECT NAME, EMAIL, PHONE_NO, ADDRESS FROM SYSTEM_USER WHERE USER_ID = :uid";
+$user_sql  = "SELECT NAME, EMAIL, PHONE_NO, ADDRESS FROM SYSTEM_USER WHERE USER_ID = :p_uid";
 $user_stmt = oci_parse($conn, $user_sql);
-oci_bind_by_name($user_stmt, ':uid', $user_id);
+oci_bind_by_name($user_stmt, ':p_uid', $user_id);
 oci_execute($user_stmt);
 $user_data = oci_fetch_array($user_stmt, OCI_ASSOC + OCI_RETURN_NULLS);
 oci_free_statement($user_stmt);
@@ -44,9 +30,9 @@ oci_free_statement($user_stmt);
 // -------------------------------------------------------
 // STEP 3: Fetch the customer's loyalty points from CUSTOMER table
 // -------------------------------------------------------
-$loyalty_sql  = "SELECT LOYALTY_POINTS FROM CUSTOMER WHERE USER_ID = :uid";
+$loyalty_sql  = "SELECT LOYALTY_POINTS FROM CUSTOMER WHERE USER_ID = :p_uid";
 $loyalty_stmt = oci_parse($conn, $loyalty_sql);
-oci_bind_by_name($loyalty_stmt, ':uid', $user_id);
+oci_bind_by_name($loyalty_stmt, ':p_uid', $user_id);
 oci_execute($loyalty_stmt);
 $loyalty_data = oci_fetch_array($loyalty_stmt, OCI_ASSOC + OCI_RETURN_NULLS);
 oci_free_statement($loyalty_stmt);
@@ -56,10 +42,10 @@ oci_free_statement($loyalty_stmt);
 // -------------------------------------------------------
 $orders_sql  = "SELECT ORDER_ID, ORDER_DATE, TOTAL_AMOUNT, STATUS 
                 FROM ORDERS 
-                WHERE CUSTOMER_ID = :uid 
+                WHERE CUSTOMER_ID = :p_uid 
                 ORDER BY ORDER_DATE DESC";
 $orders_stmt = oci_parse($conn, $orders_sql);
-oci_bind_by_name($orders_stmt, ':uid', $user_id);
+oci_bind_by_name($orders_stmt, ':p_uid', $user_id);
 oci_execute($orders_stmt);
 
 // -------------------------------------------------------
@@ -70,11 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $new_phone   = trim($_POST['phone']);
     $new_address = trim($_POST['address']);
 
-    $update_sql  = "UPDATE SYSTEM_USER SET PHONE_NO = :phone, ADDRESS = :address WHERE USER_ID = :uid";
+    $update_sql  = "UPDATE SYSTEM_USER SET PHONE_NO = :phone, ADDRESS = :address WHERE USER_ID = :p_uid";
     $update_stmt = oci_parse($conn, $update_sql);
     oci_bind_by_name($update_stmt, ':phone',   $new_phone);
     oci_bind_by_name($update_stmt, ':address', $new_address);
-    oci_bind_by_name($update_stmt, ':uid',     $user_id);
+    oci_bind_by_name($update_stmt, ':p_uid',     $user_id);
     oci_execute($update_stmt);
     oci_free_statement($update_stmt);
 
@@ -82,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
 
     // Re-fetch updated data to display
     $user_stmt2 = oci_parse($conn, $user_sql);
-    oci_bind_by_name($user_stmt2, ':uid', $user_id);
+    oci_bind_by_name($user_stmt2, ':p_uid', $user_id);
     oci_execute($user_stmt2);
     $user_data = oci_fetch_array($user_stmt2, OCI_ASSOC + OCI_RETURN_NULLS);
     oci_free_statement($user_stmt2);
@@ -186,7 +172,6 @@ include 'header.php';
 <?php
 // Free the orders query and close connection
 oci_free_statement($orders_stmt);
-oci_close($conn);
 
 include 'footer.php';
 ?>

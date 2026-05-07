@@ -1,154 +1,142 @@
 <?php
-/**
- * Shopping Cart Page - Cleckhuddesfax Online Mart
- */
+include '../db.php';
+include 'auth_check.php';
+
+$user_id = (string)(int)$_SESSION['user_id'];
+
+// Flash messages from add_to_cart.php
+$flash_success = '';
+$flash_error   = '';
+if (!empty($_SESSION['cart_success'])) {
+    $flash_success = $_SESSION['cart_success'];
+    unset($_SESSION['cart_success']);
+}
+if (!empty($_SESSION['cart_error'])) {
+    $flash_error = $_SESSION['cart_error'];
+    unset($_SESSION['cart_error']);
+}
+
+// Query all active cart items for this user, grouped by shop
+$sql = "SELECT ci.CART_ITEM_ID, ci.QUANTITY, ci.PRICE,
+               (ci.QUANTITY * ci.PRICE) AS LINE_TOTAL,
+               p.PRODUCT_ID, p.PRODUCT_NAME,
+               s.SHOP_ID, s.SHOP_NAME
+        FROM CART_ITEM ci
+        JOIN CART c    ON ci.CART_ID    = c.CART_ID
+        JOIN PRODUCT p ON ci.PRODUCT_ID = p.PRODUCT_ID
+        JOIN SHOP s    ON p.SHOP_ID     = s.SHOP_ID
+        WHERE c.CUSTOMER_ID = :p_uid AND c.STATUS = 'Active'
+        ORDER BY s.SHOP_NAME, p.PRODUCT_NAME";
+
+$stmt = oci_parse($conn, $sql);
+oci_bind_by_name($stmt, ':p_uid', $user_id);
+oci_execute($stmt);
+
+// Bucket rows by shop name
+$by_shop    = [];
+$grand_total = 0.0;
+while ($row = oci_fetch_assoc($stmt)) {
+    $shop = $row['SHOP_NAME'];
+    if (!isset($by_shop[$shop])) {
+        $by_shop[$shop] = ['items' => [], 'subtotal' => 0.0];
+    }
+    $by_shop[$shop]['items'][]  = $row;
+    $by_shop[$shop]['subtotal'] += (float)$row['LINE_TOTAL'];
+    $grand_total += (float)$row['LINE_TOTAL'];
+}
+oci_free_statement($stmt);
+
+$page_title = 'Shopping Cart - Cleckhuddesfax Online Mart';
 include 'header.php';
 ?>
 
-<!-- Cart Section -->
 <section class="cart-page">
     <div class="container container-narrow">
         <h2 class="cart-header-title">SHOPPING CART</h2>
 
-        <!-- Butcher Trader Block -->
-        <div class="cart-trader-block">
-            <div class="cart-trader-header">
-                <h3>Trader: Butcher</h3>
-                <span class="item-count">1 Item</span>
+        <?php if ($flash_success): ?>
+            <div style="background:#d1fae5;color:#065f46;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;">
+                <?php echo htmlspecialchars($flash_success); ?>
             </div>
-            <div class="cart-item-row">
-                <div class="cart-item-img">
-                    <img src="assets/images/Dry Aged Steak.png" alt="Dry Aged Steak">
+        <?php endif; ?>
+        <?php if ($flash_error): ?>
+            <div style="background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;">
+                <?php echo htmlspecialchars($flash_error); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (empty($by_shop)): ?>
+            <div style="text-align:center;padding:4rem 1rem;color:#888;">
+                <span class="material-icons" style="font-size:3rem;display:block;margin-bottom:1rem;">shopping_cart</span>
+                <p>Your cart is empty.</p>
+                <a href="category.php" class="btn btn-primary" style="margin-top:1rem;display:inline-block;">SHOP NOW</a>
+            </div>
+        <?php else: ?>
+
+            <?php foreach ($by_shop as $shop_name => $group): ?>
+            <div class="cart-trader-block">
+                <div class="cart-trader-header">
+                    <h3>Trader: <?php echo htmlspecialchars($shop_name); ?></h3>
+                    <span class="item-count"><?php echo count($group['items']); ?> Item<?php echo count($group['items']) > 1 ? 's' : ''; ?></span>
                 </div>
-                <div class="cart-item-info">
-                    <h4 class="cart-item-name">Dry Aged Steak</h4>
-                    <div class="cart-qty-wrapper">
-                        <span class="cart-qty-box">Qty: 1</span>
-                        <span class="cart-remove-link">REMOVE</span>
+
+                <?php foreach ($group['items'] as $item):
+                    $img_file = __DIR__ . '/assets/images/' . $item['PRODUCT_NAME'] . '.png';
+                    $has_img  = file_exists($img_file);
+                ?>
+                <div class="cart-item-row">
+                    <div class="cart-item-img">
+                        <?php if ($has_img): ?>
+                            <img src="assets/images/<?php echo rawurlencode($item['PRODUCT_NAME']); ?>.png"
+                                 alt="<?php echo htmlspecialchars($item['PRODUCT_NAME']); ?>">
+                        <?php else: ?>
+                            <div style="width:100%;height:100%;background:#f3f3f3;display:flex;align-items:center;justify-content:center;">
+                                <span class="material-icons" style="color:#ccc;">image_not_supported</span>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                </div>
-                <div class="cart-item-price">$35.00</div>
-            </div>
-            <div class="cart-trader-subtotal">
-                <span class="subtotal-label">SUB-TOTAL (BUTCHER):</span>
-                <span class="subtotal-amount">$35.00</span>
-            </div>
-        </div>
-
-        <!-- Greengrocers Trader Block -->
-        <div class="cart-trader-block">
-            <div class="cart-trader-header">
-                <h3>Trader: Greengrocers</h3>
-                <span class="item-count">1 Item</span>
-            </div>
-            <div class="cart-item-row">
-                <div class="cart-item-img">
-                    <img src="assets/images/Fresh Tomatoes.png" alt="Fresh Tomatoes">
-                </div>
-                <div class="cart-item-info">
-                    <h4 class="cart-item-name">Fresh Tomatoes</h4>
-                    <div class="cart-qty-wrapper">
-                        <span class="cart-qty-box">Qty: 1</span>
-                        <span class="cart-remove-link">REMOVE</span>
+                    <div class="cart-item-info">
+                        <h4 class="cart-item-name">
+                            <a href="product.php?id=<?php echo (int)$item['PRODUCT_ID']; ?>" style="color:inherit;text-decoration:none;">
+                                <?php echo htmlspecialchars($item['PRODUCT_NAME']); ?>
+                            </a>
+                        </h4>
+                        <div class="cart-qty-wrapper">
+                            <span class="cart-qty-box">Qty: <?php echo (int)$item['QUANTITY']; ?></span>
+                            <form method="post" action="remove_cart_item.php" style="display:inline;">
+                                <input type="hidden" name="item_id" value="<?php echo (int)$item['CART_ITEM_ID']; ?>">
+                                <button type="submit" class="cart-remove-link"
+                                        style="background:none;border:none;cursor:pointer;color:#f97316;font-size:inherit;font-family:inherit;">
+                                    REMOVE
+                                </button>
+                            </form>
+                        </div>
                     </div>
+                    <div class="cart-item-price">£<?php echo number_format((float)$item['LINE_TOTAL'], 2); ?></div>
                 </div>
-                <div class="cart-item-price">$5.00</div>
-            </div>
-            <div class="cart-trader-subtotal">
-                <span class="subtotal-label">SUB-TOTAL (GREENGROCERS):</span>
-                <span class="subtotal-amount">$5.00</span>
-            </div>
-        </div>
+                <?php endforeach; ?>
 
-        <!-- Delicatessen Trader Block -->
-        <div class="cart-trader-block">
-            <div class="cart-trader-header">
-                <h3>Trader: Delicatessen</h3>
-                <span class="item-count">1 Item</span>
-            </div>
-            <div class="cart-item-row">
-                <div class="cart-item-img">
-                    <img src="assets/images/Cheese.png" alt="Cheese">
+                <div class="cart-trader-subtotal">
+                    <span class="subtotal-label">SUB-TOTAL (<?php echo htmlspecialchars(strtoupper($shop_name)); ?>):</span>
+                    <span class="subtotal-amount">£<?php echo number_format($group['subtotal'], 2); ?></span>
                 </div>
-                <div class="cart-item-info">
-                    <h4 class="cart-item-name">Cheese</h4>
-                    <div class="cart-qty-wrapper">
-                        <span class="cart-qty-box">Qty: 1</span>
-                        <span class="cart-remove-link">REMOVE</span>
-                    </div>
-                </div>
-                <div class="cart-item-price">$50.00</div>
             </div>
-            <div class="cart-trader-subtotal">
-                <span class="subtotal-label">SUB-TOTAL (DELICATESSEN):</span>
-                <span class="subtotal-amount">$50.00</span>
-            </div>
-        </div>
+            <?php endforeach; ?>
 
-        <!-- Fishmongers Trader Block -->
-        <div class="cart-trader-block">
-            <div class="cart-trader-header">
-                <h3>Trader: Fishmongers</h3>
-                <span class="item-count">1 Item</span>
-            </div>
-            <div class="cart-item-row">
-                <div class="cart-item-img">
-                    <img src="assets/images/Coastal Crab.png" alt="Coastal Crab">
-                </div>
-                <div class="cart-item-info">
-                    <h4 class="cart-item-name">Coastal Crab</h4>
-                    <div class="cart-qty-wrapper">
-                        <span class="cart-qty-box">Qty: 1</span>
-                        <span class="cart-remove-link">REMOVE</span>
-                    </div>
-                </div>
-                <div class="cart-item-price">$25.00</div>
-            </div>
-            <div class="cart-trader-subtotal">
-                <span class="subtotal-label">SUB-TOTAL (FISHMONGERS):</span>
-                <span class="subtotal-amount">$25.00</span>
-            </div>
-        </div>
+            <div class="cart-separator"></div>
 
-        <!-- Bakery Trader Block -->
-        <div class="cart-trader-block">
-            <div class="cart-trader-header">
-                <h3>Trader: Bakery</h3>
-                <span class="item-count">1 Item</span>
-            </div>
-            <div class="cart-item-row">
-                <div class="cart-item-img">
-                    <img src="assets/images/White Bread.png" alt="White Bread">
+            <div class="cart-summary">
+                <div class="cart-summary-row cart-grand-total">
+                    <span>GRAND TOTAL:</span>
+                    <span class="amount">£<?php echo number_format($grand_total, 2); ?></span>
                 </div>
-                <div class="cart-item-info">
-                    <h4 class="cart-item-name">White Bread</h4>
-                    <div class="cart-qty-wrapper">
-                        <span class="cart-qty-box">Qty: 1</span>
-                        <span class="cart-remove-link">REMOVE</span>
-                    </div>
+                <div class="cart-actions">
+                    <button class="btn-slot" onclick="window.location.href='collection-slot.php'">SELECT COLLECTION SLOT</button>
+                    <button class="btn-checkout" onclick="window.location.href='checkout.php'">PROCEED TO CHECKOUT</button>
                 </div>
-                <div class="cart-item-price">$10.00</div>
-            </div>
-            <div class="cart-trader-subtotal">
-                <span class="subtotal-label">SUB-TOTAL (BAKERY):</span>
-                <span class="subtotal-amount">$10.00</span>
-            </div>
-        </div>
-
-        <div class="cart-separator"></div>
-
-        <div class="cart-summary">
-            <div class="cart-summary-row cart-grand-total">
-                <span>GRAND TOTAL:</span>
-                <span class="amount">$125.00</span>
             </div>
 
-            <div class="cart-actions">
-                <button class="btn-slot" onclick="window.location.href='collection-slot.php'">SELECT COLLECTION
-                    SLOT</button>
-                <button class="btn-checkout" onclick="window.location.href='invoice.php'">PROCEED TO CHECKOUT</button>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
 </section>
 

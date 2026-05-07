@@ -1,5 +1,22 @@
 <?php
+include '../db.php';
 $page_title = 'Butchers - Cleckhuddesfax Online Mart';
+
+$keyword = '%BUTCH%';
+$sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE, p.STOCK_QUANTITY
+        FROM PRODUCT p
+        JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
+        WHERE UPPER(s.SHOP_NAME) LIKE :kw
+        ORDER BY p.PRODUCT_NAME";
+$stmt = oci_parse($conn, $sql);
+oci_bind_by_name($stmt, ':kw', $keyword);
+oci_execute($stmt);
+$products = [];
+while ($row = oci_fetch_assoc($stmt)) {
+    $products[] = $row;
+}
+oci_free_statement($stmt);
+
 include 'header.php';
 ?>
 
@@ -11,62 +28,34 @@ include 'header.php';
         </div>
 
         <div class="product-list-grid">
-            <!-- Product 1 -->
-            <div class="product-list-card">
-                <div class="product-list-img-box">
-                    <img src="assets/images/Dry Aged Steak.png" alt="Dry Aged Steak" style="width: 100%; height: 100%; object-fit: cover;">
+            <?php if (empty($products)): ?>
+                <p style="color:#888;padding:2rem 0;">No products available at the moment.</p>
+            <?php else: ?>
+                <?php foreach ($products as $p):
+                    $has_img = file_exists(__DIR__ . '/assets/images/' . $p['PRODUCT_NAME'] . '.png');
+                ?>
+                <div class="product-list-card">
+                    <div class="product-list-img-box">
+                        <?php if ($has_img): ?>
+                            <img src="assets/images/<?php echo rawurlencode($p['PRODUCT_NAME']); ?>.png"
+                                 alt="<?php echo htmlspecialchars($p['PRODUCT_NAME']); ?>"
+                                 style="width:100%;height:100%;object-fit:cover;">
+                        <?php else: ?>
+                            <div style="width:100%;height:100%;background:#f3f3f3;display:flex;align-items:center;justify-content:center;">
+                                <span class="material-icons" style="color:#ccc;font-size:2.5rem;">image_not_supported</span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="product-list-info">
+                        <span class="product-list-name"><?php echo htmlspecialchars($p['PRODUCT_NAME']); ?></span>
+                        <span class="product-list-price">$<?php echo number_format((float)$p['PRICE'], 2); ?></span>
+                    </div>
+                    <a href="product.php?id=<?php echo (int)$p['PRODUCT_ID']; ?>" class="btn-view-product">
+                        <span class="material-icons">visibility</span> VIEW PRODUCT
+                    </a>
                 </div>
-                <div class="product-list-info">
-                    <span class="product-list-name">Dry Aged Steak</span>
-                    <span class="product-list-price">$35.00</span>
-                </div>
-                <a href="butcher_product-1.php" class="btn-view-product">
-                    <span class="material-icons">visibility</span> VIEW PRODUCT
-                </a>
-            </div>
-
-            <!-- Product 2 -->
-            <div class="product-list-card">
-                <div class="product-list-img-box">
-                    <img src="assets/images/Beef Sausages.png" alt="Beef Sausages" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <div class="product-list-info">
-                    <span class="product-list-name">Beef Sausages</span>
-                    <span class="product-list-price">$12.00</span>
-                </div>
-                <a href="butcher_product-2.php" class="btn-view-product">
-                    <span class="material-icons">visibility</span> VIEW PRODUCT
-                </a>
-            </div>
-            
-            <!-- Product 3 -->
-            <div class="product-list-card">
-                <div class="product-list-img-box">
-                    <img src="assets/images/Lamb Chops.png" alt="Lamb Chops" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <div class="product-list-info">
-                    <span class="product-list-name">Lamb Chops</span>
-                    <span class="product-list-price">$28.00</span>
-                </div>
-                <a href="butcher_product-3.php" class="btn-view-product">
-                    <span class="material-icons">visibility</span> VIEW PRODUCT
-                </a>
-            </div>
-
-            <!-- Product 4 -->
-            <div class="product-list-card">
-                <div class="product-list-img-box">
-                    <img src="assets/images/Whole Chicken.png" alt="Whole Chicken" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <div class="product-list-info">
-                    <span class="product-list-name">Whole Chicken</span>
-                    <span class="product-list-price">$18.00</span>
-                </div>
-                <a href="butcher_product-4.php" class="btn-view-product">
-                    <span class="material-icons">visibility</span> VIEW PRODUCT
-                </a>
-            </div>
-
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </section>
