@@ -1,6 +1,7 @@
 <?php
 include '../db.php';
 include 'auth_check.php';
+include 'product_image_helper.php';
 
 $user_id = (string)(int)$_SESSION['user_id'];
 
@@ -17,9 +18,11 @@ if (!empty($_SESSION['cart_error'])) {
 }
 
 // Query all active cart items for this user, grouped by shop
+$image_select = product_image_select($conn, 'p');
 $sql = "SELECT ci.CART_ITEM_ID, ci.QUANTITY, ci.PRICE,
                (ci.QUANTITY * ci.PRICE) AS LINE_TOTAL,
-               p.PRODUCT_ID, p.PRODUCT_NAME,
+               p.PRODUCT_ID, p.PRODUCT_NAME
+               {$image_select},
                s.SHOP_ID, s.SHOP_NAME
         FROM CART_ITEM ci
         JOIN CART c    ON ci.CART_ID    = c.CART_ID
@@ -108,20 +111,15 @@ include 'header.php';
                     <span class="item-count"><?php echo count($group['items']); ?> Item<?php echo count($group['items']) > 1 ? 's' : ''; ?></span>
                 </div>
 
-                <?php foreach ($group['items'] as $item):
-                    $img_file = __DIR__ . '/assets/images/' . $item['PRODUCT_NAME'] . '.png';
-                    $has_img  = file_exists($img_file);
-                ?>
+                <?php foreach ($group['items'] as $item): ?>
                 <div class="cart-item-row">
                     <div class="cart-item-img">
-                        <?php if ($has_img): ?>
-                            <img src="assets/images/<?php echo rawurlencode($item['PRODUCT_NAME']); ?>.png"
-                                 alt="<?php echo htmlspecialchars($item['PRODUCT_NAME']); ?>">
-                        <?php else: ?>
-                            <div style="width:100%;height:100%;background:#f3f3f3;display:flex;align-items:center;justify-content:center;">
-                                <span class="material-icons" style="color:#ccc;">image_not_supported</span>
-                            </div>
-                        <?php endif; ?>
+                        <?php render_product_image(
+                            $item,
+                            'width:100%;height:100%;object-fit:cover;',
+                            'width:100%;height:100%;background:#f3f3f3;display:flex;align-items:center;justify-content:center;',
+                            'color:#ccc;'
+                        ); ?>
                     </div>
                     <div class="cart-item-info">
                         <h4 class="cart-item-name">

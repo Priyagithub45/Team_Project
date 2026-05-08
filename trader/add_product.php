@@ -94,7 +94,7 @@
         <div class="form-row">
           <div class="field">
             <label>Upload Product Image</label>
-            <input type="file" name="image" accept="image/*">
+            <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required>
           </div>
         </div>
 

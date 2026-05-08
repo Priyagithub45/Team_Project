@@ -22,6 +22,11 @@ if (empty($_SESSION['selected_slot_id'])) {
     exit;
 }
 $slot_id = (string)(int)$_SESSION['selected_slot_id'];
+$slot_time_expr = "REPLACE(REPLACE(cs.COLLECTION_TIME, ' ', ''), ':00', '')";
+$allowed_slot_rules_sql = "cs.COLLECTION_DATE >= SYSDATE + 1
+                           AND TO_CHAR(cs.COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')
+                           AND {$slot_time_expr} IN ('10-13','13-16','16-19')
+                           AND (20 - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) > 0";
 
 // ── Cart items for this user ──────────────────────────────────────────────────
 $items      = [];
@@ -85,8 +90,10 @@ if (empty($items)) {
 }
 
 // ── Slot details ──────────────────────────────────────────────────────────────
-$stmt = oci_parse($conn, "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION
-                           FROM COLLECTION_SLOT WHERE SLOT_ID = :p_sid");
+$stmt = oci_parse($conn, "SELECT cs.SLOT_ID, cs.COLLECTION_DATE, cs.COLLECTION_TIME, cs.LOCATION
+                           FROM COLLECTION_SLOT cs
+                           WHERE cs.SLOT_ID = :p_sid
+                             AND {$allowed_slot_rules_sql}");
 oci_bind_by_name($stmt, ':p_sid', $slot_id);
 oci_execute($stmt);
 $slot = oci_fetch_assoc($stmt);
@@ -97,6 +104,14 @@ if (!$slot) {
     unset($_SESSION['selected_slot_id']);
     header('Location: collection-slot.php');
     exit;
+}
+
+function checkout_slot_time_label(string $t): string {
+    $slot = str_replace([' ', ':00'], '', $t);
+    if ($slot === '10-13') return '10:00-13:00';
+    if ($slot === '13-16') return '13:00-16:00';
+    if ($slot === '16-19') return '16:00-19:00';
+    return $t;
 }
 
 // ── User details ──────────────────────────────────────────────────────────────
@@ -177,7 +192,7 @@ include 'header.php';
                 <h4>COLLECTION SLOT</h4>
                 <p>
                     <strong>Date:</strong> <?php echo date('l, d M Y', strtotime(substr($slot['COLLECTION_DATE'], 0, 10))); ?><br>
-                    <strong>Time:</strong> <?php echo htmlspecialchars($slot['COLLECTION_TIME']); ?><br>
+                    <strong>Time:</strong> <?php echo htmlspecialchars(checkout_slot_time_label($slot['COLLECTION_TIME'])); ?><br>
                     <strong>Location:</strong> <?php echo htmlspecialchars($slot['LOCATION']); ?>
                 </p>
                 <a href="collection-slot.php" style="font-size:0.85rem;color:#f97316;">Change slot</a>

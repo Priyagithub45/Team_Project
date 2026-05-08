@@ -2512,6 +2512,8 @@ textarea.contact-input {
 .product-list-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
+    align-items: stretch;
+    grid-auto-rows: 1fr;
     gap: 2rem;
 }
 
@@ -2519,6 +2521,7 @@ textarea.contact-input {
     background-color: var(--clr-white);
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .product-list-img-box {
@@ -2533,20 +2536,28 @@ textarea.contact-input {
 .product-list-info {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 4.8rem;
+    margin-bottom: 1rem;
 }
 
 .product-list-name {
+    flex: 1;
+    min-width: 0;
     font-size: 1.1rem;
     font-weight: 900;
     color: var(--clr-navy);
+    line-height: 1.45;
 }
 
 .product-list-price {
+    flex-shrink: 0;
     font-size: 1.1rem;
     font-weight: 900;
     color: var(--clr-orange);
+    line-height: 1.45;
+    white-space: nowrap;
 }
 
 .btn-view-product {
@@ -2558,6 +2569,8 @@ textarea.contact-input {
     background-color: var(--clr-orange);
     color: var(--clr-white);
     padding: 1rem;
+    min-height: 48px;
+    margin-top: auto;
     font-weight: 900;
     font-size: 0.85rem;
     text-transform: uppercase;
@@ -3362,5 +3375,264 @@ body.ui-enhanced .fade-in-up.is-visible {
     .search-bar {
         width: 100%;
         max-width: 100%;
+    }
+}
+
+/*******************************************************************************
+ *
+ *     CUSTOMER EXPERIENCE FINISHING LAYER
+ *
+ *******************************************************************************/
+.product-list-page,
+.category-page,
+.product-page,
+.cart-page,
+.slot-page,
+.invoice-page,
+.profile-page,
+.search-page,
+.auth-page {
+    background:
+        linear-gradient(180deg, #fffaf6 0%, #ffffff 28%, #f8fbff 100%);
+}
+
+.product-list-header,
+.search-results-header,
+.slot-header,
+.profile-section-header {
+    position: relative;
+}
+
+.product-list-header h1,
+.search-results-header h1,
+.slot-header h1,
+.profile-section-header h2 {
+    letter-spacing: 0;
+}
+
+.product-list-header p,
+.slot-subtitle,
+.search-results-header p {
+    color: #526277;
+}
+
+.product-list-grid {
+    gap: 1.85rem;
+}
+
+.product-list-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(209, 218, 230, 0.95);
+    box-shadow: 0 10px 26px rgba(28, 43, 65, 0.08);
+}
+
+.product-list-card:hover {
+    border-color: rgba(237, 92, 43, 0.38);
+}
+
+.product-list-img-box {
+    background: #f5f8fb;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    margin-bottom: 1.15rem;
+}
+
+.product-list-img-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-list-name {
+    color: #10243b;
+}
+
+.btn-view-product,
+.btn-confirm,
+.btn-checkout,
+.btn-slot,
+.submit-review-btn {
+    border-radius: 6px;
+}
+
+.btn-view-product {
+    letter-spacing: 0;
+    box-shadow: 0 12px 22px rgba(237, 92, 43, 0.18);
+}
+
+.btn-view-product .material-icons {
+    font-size: 1.05rem;
+}
+
+.main-image,
+.product-description-box,
+.product-meta,
+.cart-trader-block,
+.cart-summary,
+.invoice-box,
+.profile-form,
+.order-table-wrap,
+.review-form-card,
+.review-summary-card,
+.search-empty-state,
+.auth-card {
+    border: 1px solid rgba(226, 232, 240, 0.82);
+}
+
+.product-title {
+    letter-spacing: 0;
+}
+
+.product-description-box,
+.product-meta {
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.cart-trader-header,
+.reviews-list-header,
+.search-section-title {
+    border-color: rgba(28, 43, 65, 0.16);
+}
+
+.cart-item-row,
+.review-item {
+    border-radius: 8px;
+}
+
+.cart-item-row:hover {
+    background: #fff8f4;
+}
+
+.slot-tabs {
+    gap: 0.75rem;
+    border-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.slot-tab {
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    margin-right: 0;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 8px 18px rgba(28, 43, 65, 0.06);
+}
+
+.slot-tab.active {
+    background: var(--clr-navy);
+    color: var(--clr-white);
+    border-color: var(--clr-navy);
+}
+
+.slot-card {
+    min-height: 215px;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 24px rgba(28, 43, 65, 0.08);
+}
+
+.slot-card:hover {
+    border-color: rgba(237, 92, 43, 0.38);
+}
+
+.slot-card.selected {
+    background: #18304b;
+    border-color: #18304b;
+}
+
+.slot-badge {
+    border: 0;
+    background: #e8f7ef;
+    color: #147849;
+    letter-spacing: 0;
+}
+
+.slot-card.selected .slot-badge {
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--clr-white);
+}
+
+.slot-time {
+    letter-spacing: 0;
+}
+
+.slot-name {
+    color: #617086;
+}
+
+.slot-card.selected .slot-name,
+.slot-card.selected .slot-availability {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.slot-availability {
+    color: #617086;
+    margin-top: auto;
+}
+
+.progress-bar-bg {
+    border-radius: 999px;
+    overflow: hidden;
+    background: #e8edf4;
+}
+
+.progress-bar-fill {
+    border-radius: inherit;
+    background: var(--clr-orange);
+}
+
+.confirmation-bar {
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255, 255, 255, 0.94);
+}
+
+.info-icon {
+    background: var(--clr-navy);
+    color: var(--clr-white);
+}
+
+.invoice-box {
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.invoice-customer {
+    background: #fbfdff;
+}
+
+.invoice-table th,
+.order-table th {
+    background: #f7fafc;
+}
+
+.invoice-table td,
+.order-table td {
+    vertical-align: middle;
+}
+
+.search-page-form,
+.search-empty-state {
+    box-shadow: 0 10px 24px rgba(28, 43, 65, 0.07);
+}
+
+.search-chip-row a {
+    border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+    .product-list-grid,
+    .slot-cards {
+        gap: 1.25rem;
+    }
+
+    .slot-tabs {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .slot-tab {
+        padding: 1rem;
+    }
+
+    .confirmation-bar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 1rem;
     }
 }

@@ -52,6 +52,12 @@ function order_error_message(string $fallback, ?array $error = null): string
     if (strpos($raw, '-20004') !== false) {
         return 'Selected collection slot must be at least 24 hours away. Please choose another slot.';
     }
+    if (strpos($raw, '-20005') !== false) {
+        return 'Collection slots are only available on Wednesday, Thursday, and Friday.';
+    }
+    if (strpos($raw, '-20006') !== false) {
+        return 'Collection slots are only available at 10:00-13:00, 13:00-16:00, or 16:00-19:00.';
+    }
     if (strpos($raw, '-20103') !== false) {
         return 'One or more products are currently unavailable because the trader account is suspended.';
     }
@@ -85,7 +91,14 @@ function execute_or_fail($conn, $stmt, string $message): void
 }
 
 // Lock the chosen slot so trigger capacity checks cannot race another checkout.
-$stmt = oci_parse($conn, 'SELECT SLOT_ID FROM COLLECTION_SLOT WHERE SLOT_ID = :p_sid FOR UPDATE');
+$slot_time_expr = "REPLACE(REPLACE(COLLECTION_TIME, ' ', ''), ':00', '')";
+$stmt = oci_parse($conn, "SELECT SLOT_ID
+                          FROM COLLECTION_SLOT
+                          WHERE SLOT_ID = :p_sid
+                            AND COLLECTION_DATE >= SYSDATE + 1
+                            AND TO_CHAR(COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')
+                            AND {$slot_time_expr} IN ('10-13','13-16','16-19')
+                          FOR UPDATE");
 oci_bind_by_name($stmt, ':p_sid', $slot_id);
 execute_or_fail($conn, $stmt, 'Could not verify the selected collection slot.');
 $slot = oci_fetch_assoc($stmt);
@@ -93,7 +106,7 @@ oci_free_statement($stmt);
 
 if (!$slot) {
     unset($_SESSION['selected_slot_id']);
-    redirect_order_failure($conn, 'Selected collection slot is no longer available. Please choose another slot.');
+    redirect_order_failure($conn, 'Selected collection slot is no longer available. Please choose a Wednesday, Thursday, or Friday slot at 10:00-13:00, 13:00-16:00, or 16:00-19:00.');
 }
 
 $cart_items = [];
@@ -212,8 +225,8 @@ if ($method_id !== null) {
 
 // Create the order and return its generated id from Oracle.
 $order_id = null;
-$stmt = oci_parse($conn, "INSERT INTO ORDERS (ORDER_ID, CUSTOMER_ID, SLOT_ID, TOTAL_AMOUNT, ORDER_DATE)
-                          VALUES (ORDER_SEQ.NEXTVAL, :p_uid, :p_sid, :p_total, SYSDATE)
+$stmt = oci_parse($conn, "INSERT INTO ORDERS (ORDER_ID, CUSTOMER_ID, SLOT_ID, TOTAL_AMOUNT, ORDER_DATE, STATUS)
+                          VALUES (ORDER_SEQ.NEXTVAL, :p_uid, :p_sid, :p_total, SYSDATE, 'Paid')
                           RETURNING ORDER_ID INTO :p_oid");
 oci_bind_by_name($stmt, ':p_uid', $user_id);
 oci_bind_by_name($stmt, ':p_sid', $slot_id);

@@ -1,5 +1,6 @@
 <?php
 include '../db.php';
+include 'product_image_helper.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
@@ -19,9 +20,11 @@ if (!$id || $id < 1) {
     not_found_page();
 }
 
+$image_select = product_image_select($conn, 'p');
 $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE,
                p.STOCK_QUANTITY, p.MIN_ORDER, p.MAX_ORDER, p.ALLERGY_INFO,
-               p.QUANTITY_PER_ITEM,
+               p.QUANTITY_PER_ITEM
+               {$image_select},
                s.SHOP_NAME, c.CATEGORY_NAME
         FROM PRODUCT p
         JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
@@ -39,10 +42,6 @@ if (!$row) {
 }
 
 $page_title = htmlspecialchars($row['PRODUCT_NAME']) . ' - Cleckhuddesfax Online Mart';
-
-$img_file  = __DIR__ . '/assets/images/' . $row['PRODUCT_NAME'] . '.png';
-$has_image = file_exists($img_file);
-$img_src   = $has_image ? 'assets/images/' . rawurlencode($row['PRODUCT_NAME']) . '.png' : '';
 
 $in_stock = ((int)$row['STOCK_QUANTITY'] > 0);
 $min_qty  = max(1, (int)($row['MIN_ORDER'] ?? 1));
@@ -151,14 +150,12 @@ if (!empty($_SESSION['review_error'])) {
 
         <div class="product-image-col">
             <div class="main-image">
-                <?php if ($has_image): ?>
-                    <img src="<?php echo $img_src; ?>"
-                         alt="<?php echo htmlspecialchars($row['PRODUCT_NAME']); ?>">
-                <?php else: ?>
-                    <div style="width:100%;height:300px;background:#f3f3f3;display:flex;align-items:center;justify-content:center;border-radius:8px;">
-                        <span class="material-icons" style="font-size:4rem;color:#ccc;">image_not_supported</span>
-                    </div>
-                <?php endif; ?>
+                <?php render_product_image(
+                    $row,
+                    'width:100%;height:100%;object-fit:cover;',
+                    'width:100%;height:300px;background:#f3f3f3;display:flex;align-items:center;justify-content:center;border-radius:8px;',
+                    'font-size:4rem;color:#ccc;'
+                ); ?>
             </div>
         </div>
 

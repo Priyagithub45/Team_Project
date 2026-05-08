@@ -2,6 +2,16 @@
 include '../db.php';
 include 'auth_check.php';
 
+$allowed_slot_day_sql = "TO_CHAR(COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')";
+$slot_time_expr = "REPLACE(REPLACE(COLLECTION_TIME, ' ', ''), ':00', '')";
+$allowed_slot_time_sql = "{$slot_time_expr} IN ('10-13','13-16','16-19')";
+$slot_order_sql = "CASE {$slot_time_expr}
+                       WHEN '10-13' THEN 1
+                       WHEN '13-16' THEN 2
+                       WHEN '16-19' THEN 3
+                       ELSE 9
+                   END";
+
 // Handle slot selection POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slot_id = filter_input(INPUT_POST, 'slot_id', FILTER_VALIDATE_INT);
@@ -12,7 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (20 - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) AS REMAINING
                      FROM COLLECTION_SLOT cs
                      WHERE SLOT_ID = :p_sid
-                       AND COLLECTION_DATE >= SYSDATE + 1";
+                       AND COLLECTION_DATE >= SYSDATE + 1
+                       AND {$allowed_slot_day_sql}
+                       AND {$allowed_slot_time_sql}";
         $slot_stmt = oci_parse($conn, $slot_sql);
         oci_bind_by_name($slot_stmt, ':p_sid', $slot_id);
         oci_execute($slot_stmt);
@@ -50,7 +62,9 @@ $sql = "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION,
                (20 - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) AS REMAINING
         FROM COLLECTION_SLOT cs
         WHERE COLLECTION_DATE >= SYSDATE + 1
-        ORDER BY COLLECTION_DATE, COLLECTION_TIME";
+          AND {$allowed_slot_day_sql}
+          AND {$allowed_slot_time_sql}
+        ORDER BY COLLECTION_DATE, {$slot_order_sql}";
 
 $stmt = oci_parse($conn, $sql);
 oci_execute($stmt);
@@ -80,10 +94,19 @@ function fmt_date(string $d): string {
 
 // Helper: derive slot label from time string
 function slot_label(string $t): string {
-    $hour = (int)$t;
-    if ($hour < 13)  return 'Morning Collection';
-    if ($hour < 16)  return 'Afternoon Collection';
-    return 'Evening Collection';
+    $slot = str_replace([' ', ':00'], '', $t);
+    if ($slot === '10-13') return 'Morning Collection';
+    if ($slot === '13-16') return 'Afternoon Collection';
+    if ($slot === '16-19') return 'Evening Collection';
+    return 'Collection Slot';
+}
+
+function slot_time_label(string $t): string {
+    $slot = str_replace([' ', ':00'], '', $t);
+    if ($slot === '10-13') return '10:00-13:00';
+    if ($slot === '13-16') return '13:00-16:00';
+    if ($slot === '16-19') return '16:00-19:00';
+    return $t;
 }
 ?>
 
@@ -91,7 +114,7 @@ function slot_label(string $t): string {
     <div class="container">
         <div class="slot-header">
             <h1>SELECT COLLECTION SLOT</h1>
-            <p class="slot-subtitle">Choose a convenient time for your pickup. Max 20 orders per slot. Must be at least 24 hours from now.</p>
+            <p class="slot-subtitle">Choose a Wednesday, Thursday, or Friday pickup. Slots run 10:00-13:00, 13:00-16:00, and 16:00-19:00. Max 20 orders per slot. Must be at least 24 hours from now.</p>
         </div>
 
         <?php if (empty($by_date)): ?>
@@ -126,8 +149,10 @@ function slot_label(string $t): string {
                     $remaining = (int)$slot['REMAINING'];
                     $is_full   = ($remaining <= 0);
                     $is_sel    = ((int)$slot['SLOT_ID'] === (int)$selected_slot_id);
-                    $time_str  = htmlspecialchars($slot['COLLECTION_TIME']);
+                    $time_str  = htmlspecialchars(slot_time_label($slot['COLLECTION_TIME']));
                     $label     = slot_label($slot['COLLECTION_TIME']);
+                    $used      = max(0, 20 - $remaining);
+                    $filled_pct = min(100, max(0, (int)round(($used / 20) * 100)));
                 ?>
                 <form method="post" action="collection-slot.php">
                     <input type="hidden" name="slot_id" value="<?php echo (int)$slot['SLOT_ID']; ?>">
@@ -146,8 +171,12 @@ function slot_label(string $t): string {
                         <div class="slot-time"><?php echo $time_str; ?></div>
                         <div class="slot-name"><?php echo htmlspecialchars($label); ?></div>
                         <?php if (!$is_full): ?>
-                        <div style="font-size:0.75rem;color:#888;margin-top:0.5rem;">
-                            <?php echo $remaining; ?> spot<?php echo $remaining !== 1 ? 's' : ''; ?> remaining
+                        <div class="slot-availability">
+                            <span><?php echo $remaining; ?> spot<?php echo $remaining !== 1 ? 's' : ''; ?> left</span>
+                            <span><?php echo $used; ?>/20 booked</span>
+                        </div>
+                        <div class="progress-bar-bg" aria-hidden="true">
+                            <div class="progress-bar-fill" style="width:<?php echo $filled_pct; ?>%;"></div>
                         </div>
                         <?php endif; ?>
                     </button>

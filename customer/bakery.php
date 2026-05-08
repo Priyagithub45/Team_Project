@@ -1,9 +1,13 @@
 <?php
 include '../db.php';
+include 'product_image_helper.php';
 $page_title = 'Bakery - Cleckhuddesfax Online Mart';
 
 $keyword = '%BAKER%';
-$sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE, p.STOCK_QUANTITY
+$image_select = product_image_select($conn, 'p');
+$sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE, p.STOCK_QUANTITY,
+               s.SHOP_NAME
+               {$image_select}
         FROM PRODUCT p
         JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
         WHERE UPPER(s.SHOP_NAME) LIKE :kw
@@ -31,20 +35,10 @@ include 'header.php';
             <?php if (empty($products)): ?>
                 <p style="color:#888;padding:2rem 0;">No products available at the moment.</p>
             <?php else: ?>
-                <?php foreach ($products as $p):
-                    $has_img = file_exists(__DIR__ . '/assets/images/' . $p['PRODUCT_NAME'] . '.png');
-                ?>
+                <?php foreach ($products as $p): ?>
                 <div class="product-list-card">
                     <div class="product-list-img-box">
-                        <?php if ($has_img): ?>
-                            <img src="assets/images/<?php echo rawurlencode($p['PRODUCT_NAME']); ?>.png"
-                                 alt="<?php echo htmlspecialchars($p['PRODUCT_NAME']); ?>"
-                                 style="width:100%;height:100%;object-fit:cover;">
-                        <?php else: ?>
-                            <div style="width:100%;height:100%;background:#f3f3f3;display:flex;align-items:center;justify-content:center;">
-                                <span class="material-icons" style="color:#ccc;font-size:2.5rem;">image_not_supported</span>
-                            </div>
-                        <?php endif; ?>
+                        <?php render_product_image($p); ?>
                     </div>
                     <div class="product-list-info">
                         <span class="product-list-name"><?php echo htmlspecialchars($p['PRODUCT_NAME']); ?></span>

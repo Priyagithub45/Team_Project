@@ -13,6 +13,10 @@ if (empty($_SESSION['selected_slot_id'])) {
     exit;
 }
 $slot_id = (string)(int)$_SESSION['selected_slot_id'];
+$slot_time_expr = "REPLACE(REPLACE(cs.COLLECTION_TIME, ' ', ''), ':00', '')";
+$allowed_slot_rules_sql = "cs.COLLECTION_DATE >= SYSDATE + 1
+                           AND TO_CHAR(cs.COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')
+                           AND {$slot_time_expr} IN ('10-13','13-16','16-19')";
 
 $is_buy_now = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') && !empty($_SESSION['buy_now_item']);
 $items = [];
@@ -104,13 +108,22 @@ foreach ($items as $item) {
     }
 }
 
-$stmt = oci_parse($conn, "SELECT COUNT(*) AS USED_COUNT
-                          FROM ORDERS
-                          WHERE SLOT_ID = :p_sid");
+$stmt = oci_parse($conn, "SELECT cs.SLOT_ID,
+                                 (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID) AS USED_COUNT
+                          FROM COLLECTION_SLOT cs
+                          WHERE cs.SLOT_ID = :p_sid
+                            AND {$allowed_slot_rules_sql}");
 oci_bind_by_name($stmt, ':p_sid', $slot_id);
 oci_execute($stmt);
 $slot_usage = oci_fetch_assoc($stmt);
 oci_free_statement($stmt);
+
+if (!$slot_usage) {
+    unset($_SESSION['selected_slot_id']);
+    $_SESSION['order_error'] = 'Selected collection slot is no longer available. Please choose a Wednesday, Thursday, or Friday slot at 10:00-13:00, 13:00-16:00, or 16:00-19:00.';
+    header('Location: collection-slot.php');
+    exit;
+}
 
 if ((int)($slot_usage['USED_COUNT'] ?? 20) >= 20) {
     $_SESSION['order_error'] = 'Selected collection slot is now full. Please choose another slot.';

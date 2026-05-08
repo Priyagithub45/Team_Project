@@ -1,5 +1,6 @@
 <?php
 include '../db.php';
+include 'product_image_helper.php';
 
 $query = trim($_GET['q'] ?? '');
 $query = preg_replace('/\s+/', ' ', $query);
@@ -12,27 +13,13 @@ $best_matches = [];
 $related_matches = [];
 $extra_related = [];
 
-function product_image_exists(string $product_name): bool
-{
-    return file_exists(__DIR__ . '/assets/images/' . $product_name . '.png');
-}
-
 function render_product_card(array $product): void
 {
     $name = $product['PRODUCT_NAME'] ?? '';
-    $has_img = product_image_exists($name);
     ?>
     <div class="product-list-card">
         <div class="product-list-img-box">
-            <?php if ($has_img): ?>
-                <img src="assets/images/<?php echo rawurlencode($name); ?>.png"
-                     alt="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>"
-                     style="width:100%;height:100%;object-fit:cover;">
-            <?php else: ?>
-                <div style="width:100%;height:100%;background:#f3f3f3;display:flex;align-items:center;justify-content:center;">
-                    <span class="material-icons" style="color:#ccc;font-size:2.5rem;">image_not_supported</span>
-                </div>
-            <?php endif; ?>
+            <?php render_product_image($product); ?>
         </div>
         <div class="product-list-info">
             <span class="product-list-name"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -53,8 +40,10 @@ if ($query !== '') {
     $exact = strtoupper($query);
     $prefix = strtoupper($query) . '%';
     $like = '%' . strtoupper($query) . '%';
+    $image_select = product_image_select($conn, 'p');
 
-    $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE, p.STOCK_QUANTITY,
+    $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE, p.STOCK_QUANTITY
+                   {$image_select},
                    s.SHOP_ID, s.SHOP_NAME,
                    c.CATEGORY_ID, c.CATEGORY_NAME,
                    CASE
@@ -108,7 +97,8 @@ if ($query !== '') {
         $seed_shop_id = (string)(int)$seed['SHOP_ID'];
         $seed_product_id = (string)(int)$seed['PRODUCT_ID'];
 
-        $sql_related = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE, p.STOCK_QUANTITY,
+        $sql_related = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE, p.STOCK_QUANTITY
+                               {$image_select},
                                s.SHOP_ID, s.SHOP_NAME,
                                c.CATEGORY_ID, c.CATEGORY_NAME,
                                7 AS MATCH_SCORE
