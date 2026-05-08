@@ -46,6 +46,34 @@ while ($row = oci_fetch_assoc($stmt)) {
 }
 oci_free_statement($stmt);
 
+$selected_slot = null;
+if (!empty($_SESSION['selected_slot_id'])) {
+    $slot_id = (string)(int)$_SESSION['selected_slot_id'];
+    $slot_sql = "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION
+                 FROM COLLECTION_SLOT
+                 WHERE SLOT_ID = :p_sid";
+    $slot_stmt = oci_parse($conn, $slot_sql);
+    oci_bind_by_name($slot_stmt, ':p_sid', $slot_id);
+    oci_execute($slot_stmt);
+    $selected_slot = oci_fetch_assoc($slot_stmt);
+    oci_free_statement($slot_stmt);
+
+    if (!$selected_slot) {
+        unset($_SESSION['selected_slot_id']);
+    }
+}
+
+function cart_slot_date(?string $date_value): string {
+    if (!$date_value) {
+        return 'Date unavailable';
+    }
+
+    $date_part = substr($date_value, 0, 10);
+    $timestamp = strtotime($date_part);
+
+    return $timestamp ? date('l, d M Y', $timestamp) : $date_value;
+}
+
 $page_title = 'Shopping Cart - Cleckhuddesfax Online Mart';
 include 'header.php';
 ?>
@@ -126,13 +154,30 @@ include 'header.php';
             <div class="cart-separator"></div>
 
             <div class="cart-summary">
+                <?php if ($selected_slot): ?>
+                    <div class="cart-selected-slot">
+                        <span class="material-icons">event_available</span>
+                        <div>
+                            <strong>Collection slot selected</strong>
+                            <p>
+                                <?php echo htmlspecialchars(cart_slot_date($selected_slot['COLLECTION_DATE'] ?? null)); ?>
+                                at <?php echo htmlspecialchars($selected_slot['COLLECTION_TIME'] ?? 'Time unavailable'); ?>
+                                <?php if (!empty($selected_slot['LOCATION'])): ?>
+                                    &middot; <?php echo htmlspecialchars($selected_slot['LOCATION']); ?>
+                                <?php endif; ?>
+                            </p>
+                            <a href="collection-slot.php">Change slot</a>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="cart-summary-row cart-grand-total">
                     <span>GRAND TOTAL:</span>
                     <span class="amount">£<?php echo number_format($grand_total, 2); ?></span>
                 </div>
                 <div class="cart-actions">
                     <button class="btn-slot" onclick="window.location.href='collection-slot.php'">SELECT COLLECTION SLOT</button>
-                    <button class="btn-checkout" onclick="window.location.href='checkout.php'">PROCEED TO CHECKOUT</button>
+                    <button class="btn-checkout" onclick="window.location.href='checkout.php?mode=cart'">PROCEED TO CHECKOUT</button>
                 </div>
             </div>
 

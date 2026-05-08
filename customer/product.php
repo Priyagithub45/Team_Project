@@ -47,18 +47,100 @@ $img_src   = $has_image ? 'assets/images/' . rawurlencode($row['PRODUCT_NAME']) 
 $in_stock = ((int)$row['STOCK_QUANTITY'] > 0);
 $min_qty  = max(1, (int)($row['MIN_ORDER'] ?? 1));
 $max_qty  = (int)($row['MAX_ORDER'] ?? 99);
+$product_id = (string)(int)$row['PRODUCT_ID'];
+$current_user_id = isset($_SESSION['user_id']) ? (string)(int)$_SESSION['user_id'] : null;
+
+$reviews = [];
+$stmt = oci_parse($conn, "SELECT r.REVIEW_ID, r.RATING, r.COMMENT_TEXT, r.REVIEW_DATE,
+                                 su.NAME AS CUSTOMER_NAME
+                          FROM REVIEW r
+                          JOIN SYSTEM_USER su ON su.USER_ID = r.CUSTOMER_ID
+                          WHERE r.PRODUCT_ID = :p_pid
+                            AND NVL(UPPER(r.STATUS), 'APPROVED') = 'APPROVED'
+                            AND NVL(UPPER(r.DISPLAY_FLAG), 'Y') = 'Y'
+                          ORDER BY r.REVIEW_DATE DESC, r.REVIEW_ID DESC");
+oci_bind_by_name($stmt, ':p_pid', $product_id);
+oci_execute($stmt);
+while ($review = oci_fetch_assoc($stmt)) {
+    $reviews[] = $review;
+}
+oci_free_statement($stmt);
+
+$review_count = count($reviews);
+$average_rating = 0.0;
+if ($review_count > 0) {
+    $rating_total = 0;
+    foreach ($reviews as $review) {
+        $rating_total += (int)$review['RATING'];
+    }
+    $average_rating = $rating_total / $review_count;
+}
+
+$has_purchased_product = false;
+$has_reviewed_product = false;
+if ($current_user_id !== null) {
+    $stmt = oci_parse($conn, "SELECT COUNT(*) AS CNT
+                              FROM ORDERS o
+                              JOIN ORDER_ITEM oi ON oi.ORDER_ID = o.ORDER_ID
+                              WHERE o.CUSTOMER_ID = :p_uid
+                                AND oi.PRODUCT_ID = :p_pid");
+    oci_bind_by_name($stmt, ':p_uid', $current_user_id);
+    oci_bind_by_name($stmt, ':p_pid', $product_id);
+    oci_execute($stmt);
+    $purchase = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+    $has_purchased_product = ((int)($purchase['CNT'] ?? 0) > 0);
+
+    $stmt = oci_parse($conn, "SELECT COUNT(*) AS CNT
+                              FROM REVIEW
+                              WHERE CUSTOMER_ID = :p_uid
+                                AND PRODUCT_ID = :p_pid");
+    oci_bind_by_name($stmt, ':p_uid', $current_user_id);
+    oci_bind_by_name($stmt, ':p_pid', $product_id);
+    oci_execute($stmt);
+    $existing_review = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+    $has_reviewed_product = ((int)($existing_review['CNT'] ?? 0) > 0);
+}
+
+function render_review_stars(int $rating): string
+{
+    $rating = max(1, min(5, $rating));
+    $html = '';
+    for ($i = 1; $i <= 5; $i++) {
+        $html .= '<span class="material-icons">' . ($i <= $rating ? 'star' : 'star_border') . '</span>';
+    }
+    return $html;
+}
 
 include 'header.php';
 
 if (!empty($_SESSION['cart_success'])) {
     $flash = $_SESSION['cart_success'];
     unset($_SESSION['cart_success']);
-    echo '<div style="background:#d1fae5;color:#065f46;padding:0.75rem 1.5rem;max-width:1200px;margin:1rem auto;border-radius:6px;">'
-       . htmlspecialchars($flash) . '</div>';
+    echo '<div class="product-flash product-flash-success">'
+       . '<span class="material-icons">check_circle</span>'
+       . '<span>' . htmlspecialchars($flash) . '</span>'
+       . '<a href="cart.php">View cart</a>'
+       . '</div>';
 }
 if (!empty($_SESSION['cart_error'])) {
     $flash = $_SESSION['cart_error'];
     unset($_SESSION['cart_error']);
+    echo '<div class="product-flash product-flash-error">'
+       . '<span class="material-icons">error</span>'
+       . '<span>' . htmlspecialchars($flash) . '</span>'
+       . '</div>';
+}
+if (!empty($_SESSION['review_success'])) {
+    $flash = $_SESSION['review_success'];
+    unset($_SESSION['review_success']);
+    echo '<div style="background:#d1fae5;color:#065f46;padding:0.75rem 1.5rem;max-width:1200px;margin:1rem auto;border-radius:6px;">'
+       . htmlspecialchars($flash) . '</div>';
+}
+if (!empty($_SESSION['review_error'])) {
+    $flash = $_SESSION['review_error'];
+    unset($_SESSION['review_error']);
     echo '<div style="background:#fee2e2;color:#991b1b;padding:0.75rem 1.5rem;max-width:1200px;margin:1rem auto;border-radius:6px;">'
        . htmlspecialchars($flash) . '</div>';
 }
@@ -135,8 +217,7 @@ if (!empty($_SESSION['cart_error'])) {
                         <button type="submit" class="btn btn-primary btn-full">
                             <span class="material-icons" style="font-size:1.2rem;">shopping_cart</span> ADD TO CART
                         </button>
-                        <button type="button" class="btn btn-outline btn-full"
-                                onclick="window.location.href='cart.php'">
+                        <button type="submit" formaction="buy_now.php" class="btn btn-outline btn-full">
                             <span class="material-icons" style="font-size:1.2rem;">bolt</span> BUY IT NOW
                         </button>
                     <?php else: ?>
@@ -182,24 +263,57 @@ if (!empty($_SESSION['cart_error'])) {
     <div class="container reviews-container">
         <div class="reviews-form-col">
             <h2 class="reviews-main-title">Customer Reviews</h2>
-            <div class="review-form-card">
-                <h3>Share your thoughts</h3>
-                <div class="rating-input">
-                    <span class="rating-label">YOUR RATING</span>
-                    <div class="stars-outline">
-                        <span class="material-icons">star_border</span>
-                        <span class="material-icons">star_border</span>
-                        <span class="material-icons">star_border</span>
-                        <span class="material-icons">star_border</span>
-                        <span class="material-icons">star_border</span>
+            <?php if ($review_count > 0): ?>
+                <div class="review-summary-card">
+                    <div class="review-average"><?php echo number_format($average_rating, 1); ?></div>
+                    <div>
+                        <div class="stars-filled"><?php echo render_review_stars((int)round($average_rating)); ?></div>
+                        <p><?php echo $review_count; ?> review<?php echo $review_count === 1 ? '' : 's'; ?> for this product</p>
                     </div>
                 </div>
-                <div class="review-input">
-                    <span class="review-label">REVIEW</span>
-                    <textarea placeholder="Write a review."></textarea>
+            <?php endif; ?>
+
+            <?php if (!$current_user_id): ?>
+                <div class="review-form-card">
+                    <h3>Want to review this product?</h3>
+                    <p class="review-help-text">Log in after purchasing this product to share your thoughts.</p>
+                    <a href="login.php" class="btn btn-full submit-review-btn">LOGIN TO REVIEW</a>
                 </div>
-                <button type="button" class="btn btn-full submit-review-btn">SUBMIT REVIEW</button>
-            </div>
+            <?php elseif (!$has_purchased_product): ?>
+                <div class="review-form-card">
+                    <h3>Verified buyers only</h3>
+                    <p class="review-help-text">You can review this product after it appears in your order history.</p>
+                </div>
+            <?php elseif ($has_reviewed_product): ?>
+                <div class="review-form-card">
+                    <h3>Review submitted</h3>
+                    <p class="review-help-text">You have already reviewed this product. Thank you for helping other customers.</p>
+                </div>
+            <?php else: ?>
+                <div class="review-form-card">
+                    <h3>Share your thoughts</h3>
+                    <form method="post" action="submit_review.php">
+                        <input type="hidden" name="product_id" value="<?php echo (int)$row['PRODUCT_ID']; ?>">
+
+                        <div class="rating-input">
+                            <label class="rating-label" for="rating">YOUR RATING</label>
+                            <select id="rating" name="rating" class="review-rating-select" required>
+                                <option value="">Select rating</option>
+                                <option value="5">5 - Excellent</option>
+                                <option value="4">4 - Very good</option>
+                                <option value="3">3 - Good</option>
+                                <option value="2">2 - Fair</option>
+                                <option value="1">1 - Poor</option>
+                            </select>
+                        </div>
+                        <div class="review-input">
+                            <label class="review-label" for="comment">REVIEW</label>
+                            <textarea id="comment" name="comment" maxlength="255" required placeholder="Write a review."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-full submit-review-btn">SUBMIT REVIEW</button>
+                    </form>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="reviews-list-col">
@@ -207,7 +321,22 @@ if (!empty($_SESSION['cart_error'])) {
                 <h4>Customer Reviews</h4>
             </div>
             <div class="reviews-list">
-                <p style="color:#888;padding:1rem 0;">No reviews yet. Be the first!</p>
+                <?php if (empty($reviews)): ?>
+                    <p style="color:#888;padding:1rem 0;">No reviews yet.</p>
+                <?php else: ?>
+                    <?php foreach ($reviews as $review): ?>
+                        <div class="review-item">
+                            <div class="stars-filled"><?php echo render_review_stars((int)$review['RATING']); ?></div>
+                            <div class="reviewer-name">
+                                <?php echo htmlspecialchars($review['CUSTOMER_NAME'] ?? 'Customer'); ?>
+                                <span class="review-date">
+                                    <?php echo $review['REVIEW_DATE'] ? htmlspecialchars(date('d M Y', strtotime($review['REVIEW_DATE']))) : ''; ?>
+                                </span>
+                            </div>
+                            <p class="review-text"><?php echo htmlspecialchars($review['COMMENT_TEXT'] ?? ''); ?></p>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>

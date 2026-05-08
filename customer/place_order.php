@@ -1,6 +1,6 @@
 <?php
 /**
- * place_order.php - create an order from the active cart in one transaction.
+ * place_order.php - create an order from either the active cart or instant checkout.
  */
 include '../db.php';
 include 'auth_check.php';
@@ -33,6 +33,8 @@ if ($is_paypal_return) {
     $method_id_raw = filter_input(INPUT_POST, 'method_id', FILTER_VALIDATE_INT);
     $method_id = ($method_id_raw && $method_id_raw > 0) ? (string)(int)$method_id_raw : null;
 }
+
+$is_buy_now = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') && !empty($_SESSION['buy_now_item']);
 
 function order_error_message(string $fallback, ?array $error = null): string
 {
@@ -68,7 +70,8 @@ function redirect_order_failure($conn, string $message): void
 {
     oci_rollback($conn);
     $_SESSION['order_error'] = $message;
-    header('Location: checkout.php');
+    $mode = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') ? 'buy_now' : 'cart';
+    header('Location: checkout.php?mode=' . $mode);
     exit;
 }
 
@@ -93,66 +96,107 @@ if (!$slot) {
     redirect_order_failure($conn, 'Selected collection slot is no longer available. Please choose another slot.');
 }
 
-// Lock the user's active cart row(s) so cart contents stay stable while ordering.
-$stmt = oci_parse($conn, "SELECT CART_ID FROM CART WHERE CUSTOMER_ID = :p_uid AND STATUS = 'Active' FOR UPDATE");
-oci_bind_by_name($stmt, ':p_uid', $user_id);
-execute_or_fail($conn, $stmt, 'Could not lock your cart for checkout.');
-
-$active_cart_ids = [];
-while ($row = oci_fetch_assoc($stmt)) {
-    $active_cart_ids[] = (int)$row['CART_ID'];
-}
-oci_free_statement($stmt);
-
-if (empty($active_cart_ids)) {
-    redirect_order_failure($conn, 'Your cart is empty.');
-}
-
-// Fetch cart items after locking the cart. Triggers will enforce stock/min/max.
-$stmt = oci_parse($conn, "SELECT ci.PRODUCT_ID, ci.QUANTITY, ci.PRICE
-                          FROM CART_ITEM ci
-                          JOIN CART c ON ci.CART_ID = c.CART_ID
-                          WHERE c.CUSTOMER_ID = :p_uid
-                            AND c.STATUS = 'Active'
-                          ORDER BY ci.CART_ITEM_ID");
-oci_bind_by_name($stmt, ':p_uid', $user_id);
-execute_or_fail($conn, $stmt, 'Could not fetch your cart items.');
-
 $cart_items = [];
 $total_amount = 0.0;
-while ($row = oci_fetch_assoc($stmt)) {
-    $quantity = (int)$row['QUANTITY'];
-    $price = (float)$row['PRICE'];
 
-    $cart_items[] = $row;
+if ($is_buy_now) {
+    $buy_now = $_SESSION['buy_now_item'];
+    $product_id = (string)(int)$buy_now['product_id'];
+    $quantity = (int)$buy_now['quantity'];
+
+    $stmt = oci_parse($conn, "SELECT PRODUCT_ID, PRICE, STOCK_QUANTITY, MIN_ORDER, MAX_ORDER
+                              FROM PRODUCT
+                              WHERE PRODUCT_ID = :p_pid
+                              FOR UPDATE");
+    oci_bind_by_name($stmt, ':p_pid', $product_id);
+    execute_or_fail($conn, $stmt, 'Could not reserve product stock for checkout.');
+    $product = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    if (!$product) {
+        redirect_order_failure($conn, 'Product is no longer available.');
+    }
+
+    $stock = (int)$product['STOCK_QUANTITY'];
+    $min_order = max(1, (int)($product['MIN_ORDER'] ?? 1));
+    $max_order = (int)($product['MAX_ORDER'] ?? 99);
+
+    if ($quantity > $stock) {
+        redirect_order_failure($conn, 'Not enough stock for this product. Please choose a lower quantity.');
+    }
+    if ($quantity < $min_order || $quantity > $max_order) {
+        redirect_order_failure($conn, 'Quantity is outside the allowed order range.');
+    }
+
+    $price = (float)$product['PRICE'];
+    $cart_items[] = [
+        'PRODUCT_ID' => $product['PRODUCT_ID'],
+        'QUANTITY' => $quantity,
+        'PRICE' => $product['PRICE'],
+    ];
     $total_amount += $price * $quantity;
-}
-oci_free_statement($stmt);
+} else {
+    // Lock the user's active cart row(s) so cart contents stay stable while ordering.
+    $stmt = oci_parse($conn, "SELECT CART_ID FROM CART WHERE CUSTOMER_ID = :p_uid AND STATUS = 'Active' FOR UPDATE");
+    oci_bind_by_name($stmt, ':p_uid', $user_id);
+    execute_or_fail($conn, $stmt, 'Could not lock your cart for checkout.');
 
-if (empty($cart_items)) {
-    redirect_order_failure($conn, 'Your cart is empty.');
-}
+    $active_cart_ids = [];
+    while ($row = oci_fetch_assoc($stmt)) {
+        $active_cart_ids[] = (int)$row['CART_ID'];
+    }
+    oci_free_statement($stmt);
 
-$total_amount = number_format($total_amount, 2, '.', '');
+    if (empty($active_cart_ids)) {
+        redirect_order_failure($conn, 'Your cart is empty.');
+    }
 
-// Lock product rows in a consistent order before ORDER_ITEM triggers read/reduce stock.
-$stmt = oci_parse($conn, "SELECT p.PRODUCT_ID
-                          FROM PRODUCT p
-                          WHERE p.PRODUCT_ID IN (
-                              SELECT ci.PRODUCT_ID
+    // Fetch cart items after locking the cart. Triggers will enforce stock/min/max.
+    $stmt = oci_parse($conn, "SELECT ci.PRODUCT_ID, ci.QUANTITY, ci.PRICE
                               FROM CART_ITEM ci
                               JOIN CART c ON ci.CART_ID = c.CART_ID
                               WHERE c.CUSTOMER_ID = :p_uid
                                 AND c.STATUS = 'Active'
-                          )
-                          ORDER BY p.PRODUCT_ID
-                          FOR UPDATE");
-oci_bind_by_name($stmt, ':p_uid', $user_id);
-execute_or_fail($conn, $stmt, 'Could not reserve product stock for checkout.');
-while (oci_fetch_assoc($stmt)) {
-    // Fetch every locked product row before order item triggers read/update stock.
+                              ORDER BY ci.CART_ITEM_ID");
+    oci_bind_by_name($stmt, ':p_uid', $user_id);
+    execute_or_fail($conn, $stmt, 'Could not fetch your cart items.');
+
+    while ($row = oci_fetch_assoc($stmt)) {
+        $quantity = (int)$row['QUANTITY'];
+        $price = (float)$row['PRICE'];
+
+        $cart_items[] = $row;
+        $total_amount += $price * $quantity;
+    }
+    oci_free_statement($stmt);
 }
-oci_free_statement($stmt);
+
+if (empty($cart_items)) {
+    redirect_order_failure($conn, $is_buy_now ? 'No instant checkout item was selected.' : 'Your cart is empty.');
+}
+
+$total_amount = number_format($total_amount, 2, '.', '');
+
+if (!$is_buy_now) {
+    // Lock product rows in a consistent order before ORDER_ITEM triggers read/reduce stock.
+    $stmt = oci_parse($conn, "SELECT p.PRODUCT_ID
+                              FROM PRODUCT p
+                              WHERE p.PRODUCT_ID IN (
+                                  SELECT ci.PRODUCT_ID
+                                  FROM CART_ITEM ci
+                                  JOIN CART c ON ci.CART_ID = c.CART_ID
+                                  WHERE c.CUSTOMER_ID = :p_uid
+                                    AND c.STATUS = 'Active'
+                              )
+                              ORDER BY p.PRODUCT_ID
+                              FOR UPDATE");
+    oci_bind_by_name($stmt, ':p_uid', $user_id);
+    execute_or_fail($conn, $stmt, 'Could not reserve product stock for checkout.');
+    while (oci_fetch_assoc($stmt)) {
+        // Fetch every locked product row before order item triggers read/update stock.
+    }
+    oci_free_statement($stmt);
+}
 
 if ($method_id !== null) {
     $stmt = oci_parse($conn, 'SELECT METHOD_ID FROM PAYMENT_METHOD WHERE METHOD_ID = :p_mid');
@@ -228,13 +272,15 @@ if ($method_id !== null) {
 execute_or_fail($conn, $stmt, 'Could not record payment for your order.');
 oci_free_statement($stmt);
 
-$stmt = oci_parse($conn, "UPDATE CART
-                          SET STATUS = 'Closed'
-                          WHERE CUSTOMER_ID = :p_uid
-                            AND STATUS = 'Active'");
-oci_bind_by_name($stmt, ':p_uid', $user_id);
-execute_or_fail($conn, $stmt, 'Could not close your cart.');
-oci_free_statement($stmt);
+if (!$is_buy_now) {
+    $stmt = oci_parse($conn, "UPDATE CART
+                              SET STATUS = 'Closed'
+                              WHERE CUSTOMER_ID = :p_uid
+                                AND STATUS = 'Active'");
+    oci_bind_by_name($stmt, ':p_uid', $user_id);
+    execute_or_fail($conn, $stmt, 'Could not close your cart.');
+    oci_free_statement($stmt);
+}
 
 if (!oci_commit($conn)) {
     $error = oci_error($conn);
@@ -242,6 +288,7 @@ if (!oci_commit($conn)) {
 }
 
 unset($_SESSION['selected_slot_id']);
+unset($_SESSION['buy_now_item'], $_SESSION['checkout_mode']);
 unset($_SESSION['paypal_checkout_token'], $_SESSION['paypal_method_id'], $_SESSION['paypal_paid'], $_SESSION['paypal_txn_id']);
 header('Location: invoice.php?order_id=' . rawurlencode($order_id));
 exit;

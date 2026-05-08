@@ -5,10 +5,43 @@ include 'auth_check.php';
 // Handle slot selection POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slot_id = filter_input(INPUT_POST, 'slot_id', FILTER_VALIDATE_INT);
+    $is_buy_now_checkout = !empty($_SESSION['buy_now_item']) && (($_SESSION['checkout_mode'] ?? '') === 'buy_now');
+
     if ($slot_id && $slot_id > 0) {
-        $_SESSION['selected_slot_id'] = (int)$slot_id;
+        $slot_sql = "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION,
+                            (20 - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) AS REMAINING
+                     FROM COLLECTION_SLOT cs
+                     WHERE SLOT_ID = :p_sid
+                       AND COLLECTION_DATE >= SYSDATE + 1";
+        $slot_stmt = oci_parse($conn, $slot_sql);
+        oci_bind_by_name($slot_stmt, ':p_sid', $slot_id);
+        oci_execute($slot_stmt);
+        $slot = oci_fetch_assoc($slot_stmt);
+        oci_free_statement($slot_stmt);
+
+        if ($slot && (int)$slot['REMAINING'] > 0) {
+            $_SESSION['selected_slot_id'] = (int)$slot_id;
+
+            $date_label = date('l, d M Y', strtotime(substr($slot['COLLECTION_DATE'], 0, 10)));
+            $time_label = $slot['COLLECTION_TIME'];
+            $location   = $slot['LOCATION'];
+
+            $message = "Collection slot selected: {$date_label} at {$time_label}, {$location}.";
+            if ($is_buy_now_checkout) {
+                $_SESSION['checkout_notice'] = $message;
+            } else {
+                $_SESSION['cart_success'] = $message;
+            }
+        } else {
+            unset($_SESSION['selected_slot_id']);
+            if ($is_buy_now_checkout) {
+                $_SESSION['checkout_notice'] = '';
+            } else {
+                $_SESSION['cart_error'] = 'Selected collection slot is no longer available. Please choose another slot.';
+            }
+        }
     }
-    header('Location: cart.php');
+    header('Location: ' . ($is_buy_now_checkout ? 'checkout.php?mode=buy_now' : 'cart.php'));
     exit;
 }
 

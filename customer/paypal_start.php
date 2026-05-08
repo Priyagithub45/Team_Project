@@ -1,6 +1,6 @@
 <?php
 /**
- * Builds a PayPal Payments Standard sandbox cart form from the active cart.
+ * Builds a PayPal Payments Standard sandbox form from cart or instant checkout.
  */
 include '../db.php';
 include 'auth_check.php';
@@ -14,56 +14,94 @@ if (empty($_SESSION['selected_slot_id'])) {
 }
 $slot_id = (string)(int)$_SESSION['selected_slot_id'];
 
-$sql = "SELECT ci.PRODUCT_ID, ci.QUANTITY, ci.PRICE,
-               p.PRODUCT_NAME, p.STOCK_QUANTITY, p.MIN_ORDER, p.MAX_ORDER,
-               s.SHOP_NAME
-        FROM CART_ITEM ci
-        JOIN CART c    ON ci.CART_ID = c.CART_ID
-        JOIN PRODUCT p ON ci.PRODUCT_ID = p.PRODUCT_ID
-        JOIN SHOP s    ON p.SHOP_ID = s.SHOP_ID
-        WHERE c.CUSTOMER_ID = :p_uid
-          AND c.STATUS = 'Active'
-        ORDER BY ci.CART_ITEM_ID";
-$stmt = oci_parse($conn, $sql);
-oci_bind_by_name($stmt, ':p_uid', $user_id);
-if (!oci_execute($stmt)) {
-    $e = oci_error($stmt);
+$is_buy_now = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') && !empty($_SESSION['buy_now_item']);
+$items = [];
+$cart_total = 0.0;
+
+if ($is_buy_now) {
+    $buy_now = $_SESSION['buy_now_item'];
+    $product_id = (string)(int)$buy_now['product_id'];
+    $quantity = (int)$buy_now['quantity'];
+
+    $stmt = oci_parse($conn, "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE,
+                                     p.STOCK_QUANTITY, p.MIN_ORDER, p.MAX_ORDER, s.SHOP_NAME
+                              FROM PRODUCT p
+                              JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
+                              WHERE p.PRODUCT_ID = :p_pid");
+    oci_bind_by_name($stmt, ':p_pid', $product_id);
+    if (!oci_execute($stmt)) {
+        $e = oci_error($stmt);
+        oci_free_statement($stmt);
+        $_SESSION['order_error'] = 'Could not prepare PayPal checkout: ' . ($e['message'] ?? 'unknown');
+        header('Location: checkout.php?mode=buy_now');
+        exit;
+    }
+    $row = oci_fetch_assoc($stmt);
     oci_free_statement($stmt);
-    $_SESSION['order_error'] = 'Could not prepare PayPal checkout: ' . ($e['message'] ?? 'unknown');
-    header('Location: checkout.php');
+
+    if (!$row) {
+        $_SESSION['order_error'] = 'Product is no longer available.';
+        header('Location: checkout.php?mode=buy_now');
+        exit;
+    }
+
+    $row['QUANTITY'] = $quantity;
+    $items[] = $row;
+    $cart_total = ((float)$row['PRICE'] * $quantity);
+} else {
+    $sql = "SELECT ci.PRODUCT_ID, ci.QUANTITY, ci.PRICE,
+                   p.PRODUCT_NAME, p.STOCK_QUANTITY, p.MIN_ORDER, p.MAX_ORDER,
+                   s.SHOP_NAME
+            FROM CART_ITEM ci
+            JOIN CART c    ON ci.CART_ID    = c.CART_ID
+            JOIN PRODUCT p ON ci.PRODUCT_ID = p.PRODUCT_ID
+            JOIN SHOP s    ON p.SHOP_ID     = s.SHOP_ID
+            WHERE c.CUSTOMER_ID = :p_uid
+              AND c.STATUS = 'Active'
+            ORDER BY ci.CART_ITEM_ID";
+    $stmt = oci_parse($conn, $sql);
+    oci_bind_by_name($stmt, ':p_uid', $user_id);
+    if (!oci_execute($stmt)) {
+        $e = oci_error($stmt);
+        oci_free_statement($stmt);
+        $_SESSION['order_error'] = 'Could not prepare PayPal checkout: ' . ($e['message'] ?? 'unknown');
+        header('Location: checkout.php?mode=cart');
+        exit;
+    }
+
+    while ($row = oci_fetch_assoc($stmt)) {
+        $items[] = $row;
+        $cart_total += ((float)$row['PRICE'] * (int)$row['QUANTITY']);
+    }
+    oci_free_statement($stmt);
+}
+
+if (empty($items)) {
+    header('Location: ' . ($is_buy_now ? 'category.php' : 'cart.php'));
     exit;
 }
 
-$items = [];
-$cart_total = 0.0;
-while ($row = oci_fetch_assoc($stmt)) {
-    $qty = (int)$row['QUANTITY'];
-    $stock = (int)$row['STOCK_QUANTITY'];
-    $min = (int)$row['MIN_ORDER'];
-    $max = (int)$row['MAX_ORDER'];
+foreach ($items as $item) {
+    $qty = (int)$item['QUANTITY'];
+    $stock = (int)$item['STOCK_QUANTITY'];
+    $min = max(1, (int)($item['MIN_ORDER'] ?? 1));
+    $max = (int)($item['MAX_ORDER'] ?? 99);
 
     if ($qty > $stock) {
-        oci_free_statement($stmt);
-        $_SESSION['order_error'] = 'Not enough stock for one or more items. Please update your cart before paying.';
-        header('Location: checkout.php');
+        $_SESSION['order_error'] = $is_buy_now
+            ? 'Not enough stock for this product. Please choose a lower quantity.'
+            : 'Not enough stock for one or more items. Please update your cart before paying.';
+        header('Location: checkout.php?mode=' . ($is_buy_now ? 'buy_now' : 'cart'));
         exit;
     }
 
     if ($qty < $min || $qty > $max) {
-        oci_free_statement($stmt);
-        $_SESSION['order_error'] = 'One or more item quantities are outside the allowed order range.';
-        header('Location: checkout.php');
+        $_SESSION['order_error'] = $is_buy_now
+            ? 'Quantity is outside the allowed order range.'
+            : 'One or more item quantities are outside the allowed order range.';
+        header('Location: checkout.php?mode=' . ($is_buy_now ? 'buy_now' : 'cart'));
         exit;
     }
-
-    $items[] = $row;
-    $cart_total += ((float)$row['PRICE'] * $qty);
-}
-oci_free_statement($stmt);
-
-if (empty($items)) {
-    header('Location: cart.php');
-    exit;
 }
 
 $stmt = oci_parse($conn, "SELECT COUNT(*) AS USED_COUNT
@@ -76,7 +114,7 @@ oci_free_statement($stmt);
 
 if ((int)($slot_usage['USED_COUNT'] ?? 20) >= 20) {
     $_SESSION['order_error'] = 'Selected collection slot is now full. Please choose another slot.';
-    header('Location: checkout.php');
+    header('Location: checkout.php?mode=' . ($is_buy_now ? 'buy_now' : 'cart'));
     exit;
 }
 

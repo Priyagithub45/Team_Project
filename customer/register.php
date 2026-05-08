@@ -6,6 +6,10 @@
 
 session_start();
 
+if (isset($_GET['restart_otp'])) {
+    unset($_SESSION['pending_registration'], $_SESSION['otp_errors'], $_SESSION['otp_success']);
+}
+
 // already logged in -> profile
 if (isset($_SESSION['user_id'])) {
     header("Location: profile.php");

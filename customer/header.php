@@ -42,10 +42,18 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
             </a>
 
             <!-- Search Bar -->
-            <div class="search-bar">
-                <span class="material-icons search-icon">search</span>
-                <input type="text" placeholder="Search..">
-            </div>
+            <form class="search-bar" action="search.php" method="get" role="search">
+                <button type="submit" class="search-submit" aria-label="Search products">
+                    <span class="material-icons search-icon">search</span>
+                </button>
+                <input
+                    type="search"
+                    name="q"
+                    placeholder="Search products..."
+                    value="<?php echo htmlspecialchars($_GET['q'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                    autocomplete="off"
+                >
+            </form>
 
             <!-- Navigation -->
             <nav class="main-nav">

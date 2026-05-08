@@ -4,6 +4,18 @@ include 'auth_check.php';
 
 $user_id = (string)(int)$_SESSION['user_id'];
 
+$requested_mode = $_GET['mode'] ?? '';
+if ($requested_mode === 'cart') {
+    $_SESSION['checkout_mode'] = 'cart';
+    unset($_SESSION['buy_now_item']);
+} elseif ($requested_mode === 'buy_now' && !empty($_SESSION['buy_now_item'])) {
+    $_SESSION['checkout_mode'] = 'buy_now';
+} elseif (empty($_SESSION['checkout_mode'])) {
+    $_SESSION['checkout_mode'] = 'cart';
+}
+
+$is_buy_now = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') && !empty($_SESSION['buy_now_item']);
+
 // Guard: slot must be selected
 if (empty($_SESSION['selected_slot_id'])) {
     header('Location: collection-slot.php');
@@ -12,30 +24,63 @@ if (empty($_SESSION['selected_slot_id'])) {
 $slot_id = (string)(int)$_SESSION['selected_slot_id'];
 
 // ── Cart items for this user ──────────────────────────────────────────────────
-$sql_cart = "SELECT ci.CART_ITEM_ID, ci.QUANTITY, ci.PRICE,
-                    (ci.QUANTITY * ci.PRICE) AS LINE_TOTAL,
-                    p.PRODUCT_NAME, s.SHOP_NAME
-             FROM CART_ITEM ci
-             JOIN CART c    ON ci.CART_ID    = c.CART_ID
-             JOIN PRODUCT p ON ci.PRODUCT_ID = p.PRODUCT_ID
-             JOIN SHOP s    ON p.SHOP_ID     = s.SHOP_ID
-             WHERE c.CUSTOMER_ID = :p_uid AND c.STATUS = 'Active'
-             ORDER BY s.SHOP_NAME, p.PRODUCT_NAME";
-$stmt = oci_parse($conn, $sql_cart);
-oci_bind_by_name($stmt, ':p_uid', $user_id);
-oci_execute($stmt);
-
 $items      = [];
 $cart_total = 0.0;
-while ($row = oci_fetch_assoc($stmt)) {
-    $items[]     = $row;
-    $cart_total += (float)$row['LINE_TOTAL'];
+
+if ($is_buy_now) {
+    $buy_now = $_SESSION['buy_now_item'];
+    $product_id = (string)(int)$buy_now['product_id'];
+    $quantity = (int)$buy_now['quantity'];
+
+    $stmt = oci_parse($conn, "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE, s.SHOP_NAME
+                              FROM PRODUCT p
+                              JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
+                              WHERE p.PRODUCT_ID = :p_pid");
+    oci_bind_by_name($stmt, ':p_pid', $product_id);
+    oci_execute($stmt);
+    $product = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    if (!$product) {
+        unset($_SESSION['buy_now_item'], $_SESSION['checkout_mode']);
+        header('Location: category.php');
+        exit;
+    }
+
+    $line_total = (float)$product['PRICE'] * $quantity;
+    $items[] = [
+        'PRODUCT_ID' => $product['PRODUCT_ID'],
+        'PRODUCT_NAME' => $product['PRODUCT_NAME'],
+        'SHOP_NAME' => $product['SHOP_NAME'],
+        'QUANTITY' => $quantity,
+        'PRICE' => $product['PRICE'],
+        'LINE_TOTAL' => $line_total,
+    ];
+    $cart_total = $line_total;
+} else {
+    $sql_cart = "SELECT ci.CART_ITEM_ID, ci.QUANTITY, ci.PRICE,
+                        (ci.QUANTITY * ci.PRICE) AS LINE_TOTAL,
+                        p.PRODUCT_NAME, s.SHOP_NAME
+                 FROM CART_ITEM ci
+                 JOIN CART c    ON ci.CART_ID    = c.CART_ID
+                 JOIN PRODUCT p ON ci.PRODUCT_ID = p.PRODUCT_ID
+                 JOIN SHOP s    ON p.SHOP_ID     = s.SHOP_ID
+                 WHERE c.CUSTOMER_ID = :p_uid AND c.STATUS = 'Active'
+                 ORDER BY s.SHOP_NAME, p.PRODUCT_NAME";
+    $stmt = oci_parse($conn, $sql_cart);
+    oci_bind_by_name($stmt, ':p_uid', $user_id);
+    oci_execute($stmt);
+
+    while ($row = oci_fetch_assoc($stmt)) {
+        $items[]     = $row;
+        $cart_total += (float)$row['LINE_TOTAL'];
+    }
+    oci_free_statement($stmt);
 }
-oci_free_statement($stmt);
 
 // Guard: cart must not be empty
 if (empty($items)) {
-    header('Location: cart.php');
+    header('Location: ' . ($is_buy_now ? 'category.php' : 'cart.php'));
     exit;
 }
 
@@ -78,6 +123,12 @@ if (!empty($_SESSION['order_error'])) {
     unset($_SESSION['order_error']);
 }
 
+$checkout_notice = '';
+if (!empty($_SESSION['checkout_notice'])) {
+    $checkout_notice = $_SESSION['checkout_notice'];
+    unset($_SESSION['checkout_notice']);
+}
+
 // ── Bucket cart items by shop ─────────────────────────────────────────────────
 $by_shop = [];
 foreach ($items as $item) {
@@ -104,6 +155,12 @@ include 'header.php';
             </div>
             <?php endif; ?>
 
+            <?php if ($checkout_notice): ?>
+            <div style="background:#d1fae5;color:#065f46;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;">
+                <?php echo htmlspecialchars($checkout_notice); ?>
+            </div>
+            <?php endif; ?>
+
             <!-- Customer Details (read-only) -->
             <div class="invoice-customer">
                 <h4>YOUR DETAILS</h4>
@@ -127,7 +184,9 @@ include 'header.php';
             </div>
 
             <!-- Order Summary -->
-            <h4 class="invoice-table-title" style="margin-top:1.5rem;">ORDER SUMMARY</h4>
+            <h4 class="invoice-table-title" style="margin-top:1.5rem;">
+                <?php echo $is_buy_now ? 'INSTANT BUY SUMMARY' : 'ORDER SUMMARY'; ?>
+            </h4>
             <table class="invoice-table">
                 <thead>
                     <tr>
@@ -200,7 +259,11 @@ include 'header.php';
             </form>
 
             <p style="text-align:center;margin-top:0.75rem;">
-                <a href="cart.php" style="color:#888;font-size:0.85rem;">← Back to cart</a>
+                <?php if ($is_buy_now): ?>
+                    <a href="product.php?id=<?php echo (int)$items[0]['PRODUCT_ID']; ?>" style="color:#888;font-size:0.85rem;">&larr; Back to product</a>
+                <?php else: ?>
+                    <a href="cart.php" style="color:#888;font-size:0.85rem;">&larr; Back to cart</a>
+                <?php endif; ?>
             </p>
 
         </div>

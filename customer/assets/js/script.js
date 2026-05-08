@@ -106,16 +106,67 @@ function initStarRating() {
     });
 }
 
+function initUiPolish() {
+    document.body.classList.add('ui-enhanced');
+
+    const header = document.querySelector('.site-header');
+    const updateHeader = () => {
+        if (!header) return;
+        header.classList.toggle('header-scrolled', window.scrollY > 8);
+    };
+
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+
+    document
+        .querySelectorAll(
+            '.hero-content, .hero-image-wrapper, .trader-card, .process-card, .category-card, .product-list-card, .cart-trader-block, .slot-card, .invoice-box, .profile-form, .order-table-wrap, .review-form-card, .review-item, .search-empty-state'
+        )
+        .forEach((el) => el.classList.add('fade-in-up'));
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12 });
+
+        document.querySelectorAll('.fade-in-up').forEach((el) => observer.observe(el));
+    } else {
+        document.querySelectorAll('.fade-in-up').forEach((el) => el.classList.add('is-visible'));
+    }
+
+    document.querySelectorAll('form').forEach((form) => {
+        form.addEventListener('submit', () => {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.classList.add('is-submitting');
+                submitButton.dataset.originalText = submitButton.textContent;
+                submitButton.textContent = 'Please wait...';
+            }
+        });
+    });
+
+    document.querySelectorAll('[style*="background:#efe"], [style*="background:#fee"], [style*="background:#d1fae5"], [style*="background:#fee2e2"]').forEach((el) => {
+        el.classList.add('toast-message');
+    });
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initSlotSelection();
         initQuantitySelector();
         initAuthTabs();
         initStarRating();
+        initUiPolish();
     });
 } else {
     initSlotSelection();
     initQuantitySelector();
     initAuthTabs();
     initStarRating();
+    initUiPolish();
 }

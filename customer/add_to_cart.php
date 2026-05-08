@@ -137,6 +137,6 @@ if ($item_row) {
     oci_free_statement($stmt);
 }
 
-$_SESSION['cart_success'] = 'Product added to your cart!';
-header('Location: cart.php');
+$_SESSION['cart_success'] = 'Added to cart. You can keep browsing products.';
+header("Location: $back");
 exit;
