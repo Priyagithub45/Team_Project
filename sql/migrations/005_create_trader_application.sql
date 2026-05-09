@@ -1,0 +1,99 @@
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM user_tables
+    WHERE table_name = 'TRADER_APPLICATION';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE TABLE TRADER_APPLICATION (
+                APPLICATION_ID NUMBER PRIMARY KEY,
+                OWNER_NAME VARCHAR2(100) NOT NULL,
+                EMAIL VARCHAR2(100) NOT NULL,
+                PHONE_NO VARCHAR2(20),
+                ADDRESS VARCHAR2(200),
+                PROPOSED_SHOP_NAME VARCHAR2(100) NOT NULL,
+                CATEGORY_ID NUMBER,
+                BUSINESS_DESCRIPTION VARCHAR2(500),
+                NOTES VARCHAR2(500),
+                STATUS VARCHAR2(20) DEFAULT ''PENDING'' NOT NULL,
+                ADMIN_NOTE VARCHAR2(500),
+                CREATED_AT TIMESTAMP DEFAULT SYSTIMESTAMP,
+                REVIEWED_AT TIMESTAMP,
+                REVIEWED_BY NUMBER,
+                APPROVED_USER_ID NUMBER,
+                CONSTRAINT FK_TRADER_APP_CATEGORY FOREIGN KEY (CATEGORY_ID) REFERENCES CATEGORY(CATEGORY_ID),
+                CONSTRAINT FK_TRADER_APP_ADMIN FOREIGN KEY (REVIEWED_BY) REFERENCES ADMIN(USER_ID),
+                CONSTRAINT FK_TRADER_APP_USER FOREIGN KEY (APPROVED_USER_ID) REFERENCES SYSTEM_USER(USER_ID),
+                CONSTRAINT CK_TRADER_APP_STATUS CHECK (STATUS IN (''PENDING'', ''APPROVED'', ''REJECTED''))
+            )';
+    END IF;
+END;
+/
+
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM user_sequences
+    WHERE sequence_name = 'TRADER_APPLICATION_SEQ';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE TRADER_APPLICATION_SEQ START WITH 1 INCREMENT BY 1 NOCACHE';
+    END IF;
+END;
+/
+
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM user_indexes
+    WHERE index_name = 'IDX_TRADER_APP_STATUS';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE INDEX IDX_TRADER_APP_STATUS ON TRADER_APPLICATION (STATUS, CREATED_AT)';
+    END IF;
+END;
+/
+
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM user_indexes
+    WHERE index_name = 'IDX_TRADER_APP_EMAIL';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE INDEX IDX_TRADER_APP_EMAIL ON TRADER_APPLICATION (UPPER(EMAIL))';
+    END IF;
+END;
+/
+
+CREATE OR REPLACE VIEW TRADER_APPLICATION_ADMIN_V AS
+SELECT ta.APPLICATION_ID,
+       ta.OWNER_NAME,
+       ta.EMAIL,
+       ta.PHONE_NO,
+       ta.ADDRESS,
+       ta.PROPOSED_SHOP_NAME,
+       c.CATEGORY_NAME,
+       ta.BUSINESS_DESCRIPTION,
+       ta.NOTES,
+       ta.STATUS,
+       ta.ADMIN_NOTE,
+       ta.CREATED_AT,
+       ta.REVIEWED_AT,
+       ta.REVIEWED_BY,
+       ta.APPROVED_USER_ID
+FROM TRADER_APPLICATION ta
+LEFT JOIN CATEGORY c ON c.CATEGORY_ID = ta.CATEGORY_ID;
+
+COMMENT ON TABLE TRADER_APPLICATION IS 'Public trader applications awaiting admin approval before SYSTEM_USER, TRADER, and SHOP records are created.';
+COMMENT ON COLUMN TRADER_APPLICATION.STATUS IS 'PENDING, APPROVED, or REJECTED. Public applicants cannot log in until admin approval creates an active trader account.';
+COMMENT ON TABLE TRADER_APPLICATION_ADMIN_V IS 'APEX admin report source for reviewing trader applications.';

@@ -41,6 +41,7 @@ if ($query !== '') {
     $prefix = strtoupper($query) . '%';
     $like = '%' . strtoupper($query) . '%';
     $image_select = product_image_select($conn, 'p');
+    $active_filter = product_active_filter($conn, 'p');
 
     $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE, p.STOCK_QUANTITY
                    {$image_select},
@@ -58,10 +59,13 @@ if ($query !== '') {
             FROM PRODUCT p
             JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
             JOIN CATEGORY c ON p.CATEGORY_ID = c.CATEGORY_ID
-            WHERE UPPER(p.PRODUCT_NAME) LIKE :name_filter
-               OR UPPER(p.DESCRIPTION) LIKE :desc_filter
-               OR UPPER(c.CATEGORY_NAME) LIKE :cat_filter
-               OR UPPER(s.SHOP_NAME) LIKE :shop_filter
+            WHERE (
+                   UPPER(p.PRODUCT_NAME) LIKE :name_filter
+                OR UPPER(p.DESCRIPTION) LIKE :desc_filter
+                OR UPPER(c.CATEGORY_NAME) LIKE :cat_filter
+                OR UPPER(s.SHOP_NAME) LIKE :shop_filter
+            )
+            {$active_filter}
             ORDER BY MATCH_SCORE, p.PRODUCT_NAME
             FETCH FIRST 48 ROWS ONLY";
 
@@ -106,6 +110,7 @@ if ($query !== '') {
                         JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
                         JOIN CATEGORY c ON p.CATEGORY_ID = c.CATEGORY_ID
                         WHERE p.PRODUCT_ID <> :seed_product_id
+                          {$active_filter}
                           AND (p.CATEGORY_ID = :seed_category_id OR p.SHOP_ID = :seed_shop_id)
                         ORDER BY
                           CASE WHEN p.CATEGORY_ID = :seed_category_rank THEN 1 ELSE 2 END,

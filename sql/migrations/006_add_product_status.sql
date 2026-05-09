@@ -1,0 +1,22 @@
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM user_tab_columns
+    WHERE table_name = 'PRODUCT'
+      AND column_name = 'STATUS';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE PRODUCT ADD STATUS VARCHAR2(20) DEFAULT ''ACTIVE''';
+    END IF;
+END;
+/
+
+UPDATE PRODUCT
+SET STATUS = 'ACTIVE'
+WHERE STATUS IS NULL;
+
+COMMIT;
+
+COMMENT ON COLUMN PRODUCT.STATUS IS 'Trader-facing product availability: ACTIVE, INACTIVE, or DISCONTINUED.';

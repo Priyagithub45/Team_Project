@@ -21,6 +21,7 @@ if (!$id || $id < 1) {
 }
 
 $image_select = product_image_select($conn, 'p');
+$active_filter = product_active_filter($conn, 'p');
 $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE,
                p.STOCK_QUANTITY, p.MIN_ORDER, p.MAX_ORDER, p.ALLERGY_INFO,
                p.QUANTITY_PER_ITEM
@@ -29,7 +30,8 @@ $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE,
         FROM PRODUCT p
         JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
         JOIN CATEGORY c ON p.CATEGORY_ID = c.CATEGORY_ID
-        WHERE p.PRODUCT_ID = :id";
+        WHERE p.PRODUCT_ID = :id
+          {$active_filter}";
 
 $stmt = oci_parse($conn, $sql);
 oci_bind_by_name($stmt, ':id', $id, -1, OCI_B_INT);

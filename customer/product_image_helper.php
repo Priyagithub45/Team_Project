@@ -23,6 +23,36 @@ function product_image_column_exists($conn): bool
     return $exists;
 }
 
+function product_status_column_exists($conn): bool
+{
+    static $exists = null;
+
+    if ($exists !== null) {
+        return $exists;
+    }
+
+    $stmt = oci_parse(
+        $conn,
+        "SELECT COUNT(*) AS CNT
+         FROM USER_TAB_COLUMNS
+         WHERE TABLE_NAME = 'PRODUCT'
+           AND COLUMN_NAME = 'STATUS'"
+    );
+    oci_execute($stmt);
+    $row = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    $exists = ((int)($row['CNT'] ?? 0) > 0);
+    return $exists;
+}
+
+function product_active_filter($conn, string $alias = 'p'): string
+{
+    return product_status_column_exists($conn)
+        ? " AND NVL(UPPER({$alias}.STATUS), 'ACTIVE') = 'ACTIVE'"
+        : '';
+}
+
 function product_image_select($conn, string $alias = 'p'): string
 {
     return product_image_column_exists($conn)

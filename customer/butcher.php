@@ -5,12 +5,15 @@ $page_title = 'Butchers - Cleckhuddesfax Online Mart';
 
 $keyword = '%BUTCH%';
 $image_select = product_image_select($conn, 'p');
+$active_filter = product_active_filter($conn, 'p');
 $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE, p.STOCK_QUANTITY,
-               s.SHOP_NAME
+               s.SHOP_NAME, c.CATEGORY_NAME
                {$image_select}
         FROM PRODUCT p
         JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
-        WHERE UPPER(s.SHOP_NAME) LIKE :kw
+        LEFT JOIN CATEGORY c ON c.CATEGORY_ID = p.CATEGORY_ID
+        WHERE (UPPER(s.SHOP_NAME) LIKE :kw OR UPPER(c.CATEGORY_NAME) LIKE :kw)
+          {$active_filter}
         ORDER BY p.PRODUCT_NAME";
 $stmt = oci_parse($conn, $sql);
 oci_bind_by_name($stmt, ':kw', $keyword);
