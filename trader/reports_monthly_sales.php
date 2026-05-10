@@ -21,6 +21,46 @@ function money_value($value): string
     return 'GBP ' . number_format((float)$value, 2);
 }
 
+function polar_point(float $cx, float $cy, float $radius, float $angle): array
+{
+    $radians = deg2rad($angle - 90);
+    return [
+        $cx + ($radius * cos($radians)),
+        $cy + ($radius * sin($radians)),
+    ];
+}
+
+function donut_segment_path(float $cx, float $cy, float $outer, float $inner, float $start, float $end): string
+{
+    if (($end - $start) >= 359.99) {
+        $end = $start + 359.99;
+    }
+
+    [$outer_start_x, $outer_start_y] = polar_point($cx, $cy, $outer, $start);
+    [$outer_end_x, $outer_end_y] = polar_point($cx, $cy, $outer, $end);
+    [$inner_end_x, $inner_end_y] = polar_point($cx, $cy, $inner, $end);
+    [$inner_start_x, $inner_start_y] = polar_point($cx, $cy, $inner, $start);
+    $large_arc = ($end - $start) > 180 ? 1 : 0;
+
+    return sprintf(
+        'M %.3f %.3f A %.3f %.3f 0 %d 1 %.3f %.3f L %.3f %.3f A %.3f %.3f 0 %d 0 %.3f %.3f Z',
+        $outer_start_x,
+        $outer_start_y,
+        $outer,
+        $outer,
+        $large_arc,
+        $outer_end_x,
+        $outer_end_y,
+        $inner_end_x,
+        $inner_end_y,
+        $inner,
+        $inner,
+        $large_arc,
+        $inner_start_x,
+        $inner_start_y
+    );
+}
+
 $selected_month = valid_report_month($_GET['month'] ?? null);
 $sort = strtoupper(trim((string)($_GET['sort'] ?? 'INCOME')));
 $sort_options = [
@@ -89,6 +129,46 @@ $max_income = 0.0;
 foreach ($sales_rows as $row) {
     $income = (float)$row['TOTAL_INCOME'];
     $max_income = max($max_income, $income);
+}
+
+$chart_colors = ['#2f9ed8', '#43ad83', '#ffd04a', '#e85b58', '#8752a3', '#35bdb7', '#f47d35', '#ef5b8f', '#18b8cc', '#6f7bd9'];
+$chart_rows = $sales_rows;
+usort($chart_rows, static fn(array $a, array $b): int => (float)$b['TOTAL_INCOME'] <=> (float)$a['TOTAL_INCOME']);
+
+if (count($chart_rows) > 9) {
+    $visible_rows = array_slice($chart_rows, 0, 8);
+    $other_rows = array_slice($chart_rows, 8);
+    $other_income = array_sum(array_map(static fn(array $row): float => (float)$row['TOTAL_INCOME'], $other_rows));
+    $other_quantity = array_sum(array_map(static fn(array $row): int => (int)$row['TOTAL_QUANTITY'], $other_rows));
+    $other_orders = array_sum(array_map(static fn(array $row): int => (int)$row['TOTAL_ORDERS'], $other_rows));
+    $visible_rows[] = [
+        'PRODUCT_NAME' => 'Other products',
+        'TOTAL_INCOME' => $other_income,
+        'TOTAL_QUANTITY' => $other_quantity,
+        'TOTAL_ORDERS' => $other_orders,
+    ];
+    $chart_rows = $visible_rows;
+}
+
+$chart_segments = [];
+$chart_start = 0.0;
+foreach ($chart_rows as $index => $row) {
+    $income = (float)$row['TOTAL_INCOME'];
+    if ($income <= 0 || $total_income <= 0) {
+        continue;
+    }
+
+    $angle = ($income / $total_income) * 360;
+    $chart_segments[] = [
+        'label' => (string)$row['PRODUCT_NAME'],
+        'income' => $income,
+        'quantity' => (int)$row['TOTAL_QUANTITY'],
+        'orders' => (int)$row['TOTAL_ORDERS'],
+        'percentage' => ($income / $total_income) * 100,
+        'color' => $chart_colors[$index % count($chart_colors)],
+        'path' => donut_segment_path(150, 150, 118, 62, $chart_start, $chart_start + $angle),
+    ];
+    $chart_start += $angle;
 }
 
 $shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop');
@@ -176,6 +256,51 @@ $month_label = date('F Y', strtotime($selected_month . '-01'));
       <strong><?= h((string)count($sales_rows)) ?></strong>
       <small>Products sold this month</small>
     </article>
+  </section>
+
+  <section class="dashboard-panel chart-panel">
+    <div class="panel-heading">
+      <div>
+        <span class="apply-eyebrow">Visual Report</span>
+        <h2>Monthly Revenue Distribution</h2>
+      </div>
+      <a href="reports_monthly_sales.php?month=<?= h(rawurlencode($selected_month)) ?>&sort=INCOME" class="panel-link">Sort by income</a>
+    </div>
+
+    <?php if (empty($chart_segments)): ?>
+      <div class="empty-state">No paid product revenue is available for this month.</div>
+    <?php else: ?>
+      <div class="revenue-chart-wrap">
+        <div class="donut-chart-card">
+          <svg class="donut-chart" viewBox="0 0 300 300" role="img" aria-labelledby="monthlyRevenueTitle monthlyRevenueDesc">
+            <title id="monthlyRevenueTitle">Monthly revenue distribution for <?= h($shop_name) ?></title>
+            <desc id="monthlyRevenueDesc">Product revenue share for <?= h($month_label) ?></desc>
+            <circle cx="150" cy="150" r="118" fill="#f8f6f2"></circle>
+            <?php foreach ($chart_segments as $segment): ?>
+              <path d="<?= h($segment['path']) ?>" fill="<?= h($segment['color']) ?>">
+                <title><?= h($segment['label']) ?> - <?= h(money_value($segment['income'])) ?></title>
+              </path>
+            <?php endforeach; ?>
+            <circle cx="150" cy="150" r="57" fill="#ffffff"></circle>
+            <text x="150" y="142" text-anchor="middle" class="donut-total-label">Total</text>
+            <text x="150" y="166" text-anchor="middle" class="donut-total-value"><?= h(money_value($total_income)) ?></text>
+          </svg>
+        </div>
+
+        <div class="chart-legend-list">
+          <?php foreach ($chart_segments as $segment): ?>
+            <article>
+              <span class="chart-swatch" style="background: <?= h($segment['color']) ?>"></span>
+              <div>
+                <strong><?= h($segment['label']) ?></strong>
+                <small><?= h(money_value($segment['income'])) ?> &middot; <?= h(number_format($segment['percentage'], 1)) ?>%</small>
+                <small class="chart-legend-units"><?= h((string)$segment['quantity']) ?> units &middot; <?= h((string)$segment['orders']) ?> orders</small>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
   </section>
 
   <section class="dashboard-grid report-two-column-grid">

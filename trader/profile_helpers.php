@@ -28,6 +28,34 @@ function trader_shop_description_column_exists($conn): bool
     return $exists;
 }
 
+function trader_shop_image_column_exists($conn): bool
+{
+    static $exists = null;
+
+    if ($exists !== null) {
+        return $exists;
+    }
+
+    $stmt = oci_parse(
+        $conn,
+        "SELECT COUNT(*) AS CNT
+         FROM USER_TAB_COLUMNS
+         WHERE TABLE_NAME = 'SHOP'
+           AND COLUMN_NAME = 'IMAGE_PATH'"
+    );
+
+    if (!$stmt || !oci_execute($stmt)) {
+        $exists = false;
+        return $exists;
+    }
+
+    $row = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    $exists = ((int)($row['CNT'] ?? 0) > 0);
+    return $exists;
+}
+
 function trader_profile_flash_set(string $type, string $message): void
 {
     $_SESSION['trader_profile_flash'] = ['type' => $type, 'message' => $message];
@@ -69,6 +97,9 @@ function trader_fetch_profile($conn, int $trader_id): ?array
     $description_select = trader_shop_description_column_exists($conn)
         ? ', s.DESCRIPTION AS SHOP_DESCRIPTION'
         : ", NULL AS SHOP_DESCRIPTION";
+    $image_select = trader_shop_image_column_exists($conn)
+        ? ', s.IMAGE_PATH AS SHOP_IMAGE_PATH'
+        : ", NULL AS SHOP_IMAGE_PATH";
 
     $sql = "
         SELECT su.USER_ID,
@@ -84,6 +115,7 @@ function trader_fetch_profile($conn, int $trader_id): ?array
                s.LOCATION AS SHOP_LOCATION,
                s.CONTACT_NO AS SHOP_CONTACT_NO
                {$description_select}
+               {$image_select}
         FROM SYSTEM_USER su
         JOIN TRADER t ON t.USER_ID = su.USER_ID
         LEFT JOIN SHOP s ON s.TRADER_ID = t.USER_ID

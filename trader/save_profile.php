@@ -35,6 +35,56 @@ function profile_count_query($conn, string $sql, array $params): ?int
     return (int)($row['CNT'] ?? 0);
 }
 
+function save_shop_image_upload(array $file, int $shop_id): array
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => true, 'path' => null];
+    }
+
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => 'Could not read the uploaded shop image. Please try again.'];
+    }
+
+    $max_bytes = 2 * 1024 * 1024;
+    if (($file['size'] ?? 0) > $max_bytes) {
+        return ['ok' => false, 'error' => 'Shop image must be 2MB or smaller.'];
+    }
+
+    $tmp_name = $file['tmp_name'] ?? '';
+    $mime_type = $tmp_name !== '' ? mime_content_type($tmp_name) : '';
+    $extensions = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+
+    if (!isset($extensions[$mime_type])) {
+        return ['ok' => false, 'error' => 'Shop image must be JPG, PNG, or WEBP.'];
+    }
+
+    $upload_dir = dirname(__DIR__) . '/uploads/shops';
+    if (!is_dir($upload_dir) && !mkdir($upload_dir, 0755, true)) {
+        return ['ok' => false, 'error' => 'Could not create shop image folder.'];
+    }
+
+    $extension = $extensions[$mime_type];
+    $relative_path = 'uploads/shops/shop_' . $shop_id . '_' . time() . '.' . $extension;
+    $target_path = dirname(__DIR__) . '/' . $relative_path;
+
+    if (!move_uploaded_file($tmp_name, $target_path)) {
+        return ['ok' => false, 'error' => 'Could not save shop image.'];
+    }
+
+    return ['ok' => true, 'path' => $relative_path];
+}
+
+function cleanup_uploaded_shop_image(array $upload): void
+{
+    if (!empty($upload['path'])) {
+        @unlink(dirname(__DIR__) . '/' . $upload['path']);
+    }
+}
+
 $data = [
     'name' => profile_post('name'),
     'email' => profile_post('email'),
@@ -51,6 +101,18 @@ $current_profile = trader_fetch_profile($conn, $current_trader_id);
 
 if (!$current_profile || empty($current_profile['SHOP_ID'])) {
     $errors[] = 'No shop is linked to this trader account. Please ask admin to create your shop before editing profile details.';
+}
+
+$shop_image_upload = ['ok' => true, 'path' => null];
+if (isset($_FILES['shop_image']) && ($_FILES['shop_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+    if (!trader_shop_image_column_exists($conn)) {
+        $errors[] = 'Shop image uploads are not enabled yet. Please run migration 009_add_shop_image_path.sql.';
+    } elseif ($current_profile && !empty($current_profile['SHOP_ID'])) {
+        $shop_image_upload = save_shop_image_upload($_FILES['shop_image'], (int)$current_profile['SHOP_ID']);
+        if (!$shop_image_upload['ok']) {
+            $errors[] = $shop_image_upload['error'];
+        }
+    }
 }
 
 if ($data['name'] === '') {
@@ -120,6 +182,7 @@ if (empty($errors)) {
 }
 
 if (!empty($errors)) {
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set($errors);
     trader_profile_old_set($data);
     header('Location: profile.php');
@@ -148,6 +211,7 @@ $stmt = oci_parse(
 if (!$stmt) {
     $err = oci_error($conn);
     error_log('[TRADER SAVE PROFILE USER PARSE] ' . ($err['message'] ?? 'unknown error'));
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set(['Could not update account details. Please try again.']);
     trader_profile_old_set($data);
     header('Location: profile.php');
@@ -164,6 +228,7 @@ if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
     $err = oci_error($stmt);
     error_log('[TRADER SAVE PROFILE USER] ' . ($err['message'] ?? 'unknown error'));
     oci_rollback($conn);
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set(['Could not update account details. Please try again.']);
     trader_profile_old_set($data);
     header('Location: profile.php');
@@ -182,6 +247,7 @@ if (!$stmt) {
     $err = oci_error($conn);
     error_log('[TRADER SAVE PROFILE TRADER PARSE] ' . ($err['message'] ?? 'unknown error'));
     oci_rollback($conn);
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set(['Could not update trader details. Please try again.']);
     trader_profile_old_set($data);
     header('Location: profile.php');
@@ -195,6 +261,7 @@ if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
     $err = oci_error($stmt);
     error_log('[TRADER SAVE PROFILE TRADER] ' . ($err['message'] ?? 'unknown error'));
     oci_rollback($conn);
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set(['Could not update trader details. Please try again.']);
     trader_profile_old_set($data);
     header('Location: profile.php');
@@ -211,6 +278,11 @@ $shop_set = [
 if (trader_shop_description_column_exists($conn)) {
     $shop_set[] = 'DESCRIPTION = :shop_description';
 }
+if (!empty($shop_image_upload['path'])) {
+    $shop_set[] = 'IMAGE_PATH = :shop_image_path';
+}
+
+$shop_image_path = (string)($shop_image_upload['path'] ?? '');
 
 $stmt = oci_parse(
     $conn,
@@ -223,6 +295,7 @@ if (!$stmt) {
     $err = oci_error($conn);
     error_log('[TRADER SAVE PROFILE SHOP PARSE] ' . ($err['message'] ?? 'unknown error'));
     oci_rollback($conn);
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set(['Could not update shop details. Please try again.']);
     trader_profile_old_set($data);
     header('Location: profile.php');
@@ -235,12 +308,16 @@ oci_bind_by_name($stmt, ':shop_contact', $shop_contact);
 if (trader_shop_description_column_exists($conn)) {
     oci_bind_by_name($stmt, ':shop_description', $shop_description);
 }
+if (!empty($shop_image_upload['path'])) {
+    oci_bind_by_name($stmt, ':shop_image_path', $shop_image_path);
+}
 oci_bind_by_name($stmt, ':trader_id', $current_trader_id);
 
 if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
     $err = oci_error($stmt);
     error_log('[TRADER SAVE PROFILE SHOP] ' . ($err['message'] ?? 'unknown error'));
     oci_rollback($conn);
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set(['Could not update shop details. Please try again.']);
     trader_profile_old_set($data);
     header('Location: profile.php');
@@ -252,6 +329,7 @@ if (!oci_commit($conn)) {
     $err = oci_error($conn);
     error_log('[TRADER SAVE PROFILE COMMIT] ' . ($err['message'] ?? 'unknown error'));
     oci_rollback($conn);
+    cleanup_uploaded_shop_image($shop_image_upload);
     trader_profile_errors_set(['Could not finish saving profile. Please try again.']);
     trader_profile_old_set($data);
     header('Location: profile.php');

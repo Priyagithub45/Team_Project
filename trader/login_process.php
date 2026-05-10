@@ -66,7 +66,6 @@ $stored_password = (string)($user['PASSWORD'] ?? '');
 $stored_password_trimmed = trim($stored_password);
 $password_trimmed = trim($password);
 $password_ok = password_verify($password, $stored_password) || password_verify($password_trimmed, $stored_password_trimmed);
-$password_needs_upgrade = false;
 $password_info = password_get_info($stored_password_trimmed);
 $is_legacy_plain_password = ($password_info['algo'] ?? null) === null
     || ($password_info['algoName'] ?? 'unknown') === 'unknown';
@@ -74,7 +73,6 @@ $is_legacy_plain_password = ($password_info['algo'] ?? null) === null
 if (!$password_ok && $is_legacy_plain_password) {
     $password_ok = hash_equals($stored_password, $password)
         || hash_equals($stored_password_trimmed, $password_trimmed);
-    $password_needs_upgrade = $password_ok;
 }
 
 if (!$password_ok) {
@@ -99,20 +97,6 @@ if (!in_array($user_status, ['ACTIVE', 'APPROVED'], true) || !in_array($trader_s
     $_SESSION['trader_login_old'] = ['email' => $email];
     header('Location: login.php');
     exit;
-}
-
-if ($password_needs_upgrade) {
-    $new_hash = password_hash($password, PASSWORD_BCRYPT);
-    $upgrade_stmt = oci_parse($conn, 'UPDATE SYSTEM_USER SET PASSWORD = :password_hash WHERE USER_ID = :user_id');
-    if ($upgrade_stmt) {
-        oci_bind_by_name($upgrade_stmt, ':password_hash', $new_hash);
-        oci_bind_by_name($upgrade_stmt, ':user_id', $user['USER_ID']);
-        if (!oci_execute($upgrade_stmt)) {
-            $err = oci_error($upgrade_stmt);
-            error_log('[TRADER LOGIN PASSWORD UPGRADE] ' . ($err['message'] ?? 'unknown error'));
-        }
-        oci_free_statement($upgrade_stmt);
-    }
 }
 
 session_regenerate_id(true);

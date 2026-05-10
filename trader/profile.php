@@ -30,6 +30,8 @@ $data = array_merge([
 $user_status = trim((string)($profile['USER_STATUS'] ?? 'Active')) ?: 'Active';
 $trader_status = trim((string)($profile['TRADER_STATUS'] ?? 'ACTIVE')) ?: 'ACTIVE';
 $shop_description_supported = trader_shop_description_column_exists($conn);
+$shop_image_supported = trader_shop_image_column_exists($conn);
+$shop_image_path = trim((string)($profile['SHOP_IMAGE_PATH'] ?? ''));
 $initial = strtoupper(substr((string)$data['name'], 0, 1) ?: 'T');
 ?>
 <!doctype html>
@@ -66,10 +68,16 @@ $initial = strtoupper(substr((string)$data['name'], 0, 1) ?: 'T');
 <div class="main-wrap form-page">
   <div class="form-card profile-form-card">
     <div class="profile-summary">
-      <div class="profile-avatar"><?= h($initial) ?></div>
+      <?php if ($shop_image_supported && $shop_image_path !== ''): ?>
+        <div class="profile-shop-img">
+          <img src="../<?= h($shop_image_path) ?>" alt="<?= h((string)$data['shop_name']) ?>" width="80" height="80" style="object-fit:cover;display:block;">
+        </div>
+      <?php else: ?>
+        <div class="profile-avatar"><?= h($initial) ?></div>
+      <?php endif; ?>
       <div>
         <span class="apply-eyebrow">Trader Profile</span>
-        <h2><?= h((string)$data['shop_name'] ?: 'Your Shop') ?></h2>
+        <h2><?= h((string)($data['shop_name'] ?: 'Your Shop')) ?></h2>
         <p><?= h((string)$data['name']) ?> - <?= h((string)$data['email']) ?></p>
       </div>
       <div class="profile-statuses">
@@ -92,7 +100,7 @@ $initial = strtoupper(substr((string)$data['name'], 0, 1) ?: 'T');
       </div>
     <?php endif; ?>
 
-    <form method="post" action="save_profile.php" class="application-form">
+    <form method="post" action="save_profile.php" enctype="multipart/form-data" class="application-form">
       <section class="profile-section">
         <div class="panel-heading">
           <div>
@@ -153,6 +161,23 @@ $initial = strtoupper(substr((string)$data['name'], 0, 1) ?: 'T');
             <textarea id="shop_description" name="shop_description" maxlength="500"<?= !$shop_description_supported ? ' disabled' : '' ?>><?= h((string)$data['shop_description']) ?></textarea>
             <?php if (!$shop_description_supported): ?>
               <small class="field-note">Run migration 007_add_shop_description.sql to enable this field.</small>
+            <?php endif; ?>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="shop_image">Shop Image</label>
+            <?php if ($shop_image_supported && $shop_image_path !== ''): ?>
+              <div class="shop-img-thumb">
+                <img src="../<?= h($shop_image_path) ?>" alt="<?= h((string)$data['shop_name']) ?>" width="120" height="90" style="object-fit:cover;display:block;">
+              </div>
+            <?php endif; ?>
+            <input type="file" id="shop_image" name="shop_image" accept="image/*">
+            <?php if (!$shop_image_supported): ?>
+              <small class="field-note">Run migration 009_add_shop_image_path.sql to enable image uploads.</small>
+            <?php else: ?>
+              <small class="field-note">JPG, PNG, or WEBP &mdash; max 2 MB.</small>
             <?php endif; ?>
           </div>
         </div>

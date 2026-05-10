@@ -743,6 +743,12 @@ img {
     text-align: center;
 }
 
+.category-shop-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover !important;
+}
+
 /* Add icon for new trader */
 .new-trader-icon {
     width: 40px;
@@ -803,6 +809,29 @@ img {
 
 .category-card.new-trader .category-bottom-area h2 {
     color: #CBD5E1;
+}
+
+.category-card.trader-placeholder {
+    border-style: solid;
+}
+
+.category-card.trader-placeholder .category-img-area {
+    background-color: #F8FAFC;
+}
+
+.category-card.trader-placeholder .category-img-placeholder {
+    color: var(--clr-navy);
+    font-size: 1.2rem;
+    font-weight: 900;
+}
+
+.category-empty {
+    border: 2px dashed var(--clr-border);
+    color: var(--clr-text-gray);
+    font-weight: 700;
+    padding: 2rem;
+    text-align: center;
+    grid-column: 1 / -1;
 }
 
 

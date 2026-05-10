@@ -7,10 +7,15 @@
 $page_title = 'Login';
 include '../db.php';
 
-// If already logged in, send to home
+// If already logged in as customer, send to home. Non-customer: clear and show login.
 if (isset($_SESSION['user_id'])) {
-    header('Location: index.php');
-    exit;
+    if (($_SESSION['role'] ?? '') === 'customer') {
+        header('Location: index.php');
+        exit;
+    }
+    session_unset();
+    session_destroy();
+    session_start();
 }
 
 include 'header.php';
