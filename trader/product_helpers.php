@@ -58,6 +58,20 @@ function trader_product_image_column_exists($conn): bool
 
 function trader_current_shop($conn, int $trader_id): ?array
 {
+    $shop = trader_fetch_current_shop($conn, $trader_id);
+    if ($shop) {
+        return $shop;
+    }
+
+    if (!trader_create_missing_shop($conn, $trader_id)) {
+        return null;
+    }
+
+    return trader_fetch_current_shop($conn, $trader_id);
+}
+
+function trader_fetch_current_shop($conn, int $trader_id): ?array
+{
     $stmt = oci_parse(
         $conn,
         "SELECT SHOP_ID, SHOP_NAME
@@ -80,6 +94,145 @@ function trader_current_shop($conn, int $trader_id): ?array
     oci_free_statement($stmt);
 
     return $shop;
+}
+
+function trader_next_shop_id($conn): ?int
+{
+    $stmt = oci_parse(
+        $conn,
+        "SELECT COUNT(*) AS CNT
+         FROM USER_SEQUENCES
+         WHERE SEQUENCE_NAME = 'SHOP_SEQ'"
+    );
+
+    if ($stmt && oci_execute($stmt)) {
+        $row = oci_fetch_assoc($stmt);
+        oci_free_statement($stmt);
+
+        if ((int)($row['CNT'] ?? 0) > 0) {
+            $seq_stmt = oci_parse($conn, 'SELECT SHOP_SEQ.NEXTVAL AS SHOP_ID FROM DUAL');
+            if ($seq_stmt && oci_execute($seq_stmt, OCI_NO_AUTO_COMMIT)) {
+                $seq_row = oci_fetch_assoc($seq_stmt);
+                oci_free_statement($seq_stmt);
+                return (int)($seq_row['SHOP_ID'] ?? 0) ?: null;
+            }
+            if ($seq_stmt) {
+                oci_free_statement($seq_stmt);
+            }
+        }
+    } elseif ($stmt) {
+        oci_free_statement($stmt);
+    }
+
+    $fallback_stmt = oci_parse($conn, 'SELECT NVL(MAX(SHOP_ID), 0) + 1 AS SHOP_ID FROM SHOP');
+    if (!$fallback_stmt || !oci_execute($fallback_stmt, OCI_NO_AUTO_COMMIT)) {
+        if ($fallback_stmt) {
+            oci_free_statement($fallback_stmt);
+        }
+        return null;
+    }
+
+    $row = oci_fetch_assoc($fallback_stmt);
+    oci_free_statement($fallback_stmt);
+
+    return (int)($row['SHOP_ID'] ?? 0) ?: null;
+}
+
+function trader_create_missing_shop($conn, int $trader_id): bool
+{
+    $stmt = oci_parse(
+        $conn,
+        "SELECT su.NAME,
+                su.PHONE_NO,
+                su.ADDRESS,
+                su.STATUS AS USER_STATUS,
+                t.BUSINESS_NAME,
+                t.STATUS AS TRADER_STATUS
+         FROM SYSTEM_USER su
+         JOIN TRADER t ON t.USER_ID = su.USER_ID
+         WHERE su.USER_ID = :trader_id"
+    );
+
+    if (!$stmt) {
+        return false;
+    }
+
+    oci_bind_by_name($stmt, ':trader_id', $trader_id);
+    if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
+        oci_free_statement($stmt);
+        return false;
+    }
+
+    $trader = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    if (!$trader) {
+        return false;
+    }
+
+    $user_status = strtoupper(trim((string)($trader['USER_STATUS'] ?? 'ACTIVE')));
+    $trader_status = strtoupper(trim((string)($trader['TRADER_STATUS'] ?? 'ACTIVE')));
+    if ($user_status === '') {
+        $user_status = 'ACTIVE';
+    }
+    if ($trader_status === '') {
+        $trader_status = 'ACTIVE';
+    }
+    if (!in_array($user_status, ['ACTIVE', 'APPROVED'], true) || !in_array($trader_status, ['ACTIVE', 'APPROVED'], true)) {
+        return false;
+    }
+
+    $shop_name = trim((string)($trader['BUSINESS_NAME'] ?? ''));
+    if ($shop_name === '') {
+        $owner_name = trim((string)($trader['NAME'] ?? 'Trader'));
+        $shop_name = substr($owner_name . ' Shop', 0, 100);
+    }
+
+    $location = trim((string)($trader['ADDRESS'] ?? ''));
+    $contact_no = trim((string)($trader['PHONE_NO'] ?? ''));
+    $location_value = $location !== '' ? $location : null;
+    $contact_value = $contact_no !== '' ? $contact_no : null;
+
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        $shop_id = trader_next_shop_id($conn);
+        if ($shop_id === null) {
+            return false;
+        }
+
+        $insert = oci_parse(
+            $conn,
+            "INSERT INTO SHOP (SHOP_ID, SHOP_NAME, LOCATION, CONTACT_NO, TRADER_ID)
+             VALUES (:shop_id, :shop_name, :location, :contact_no, :trader_id)"
+        );
+
+        if (!$insert) {
+            return false;
+        }
+
+        oci_bind_by_name($insert, ':shop_id', $shop_id);
+        oci_bind_by_name($insert, ':shop_name', $shop_name);
+        oci_bind_by_name($insert, ':location', $location_value);
+        oci_bind_by_name($insert, ':contact_no', $contact_value);
+        oci_bind_by_name($insert, ':trader_id', $trader_id);
+
+        if (oci_execute($insert, OCI_NO_AUTO_COMMIT)) {
+            oci_free_statement($insert);
+            return oci_commit($conn);
+        }
+
+        $err = oci_error($insert);
+        oci_free_statement($insert);
+
+        if ((int)($err['code'] ?? 0) !== 1) {
+            error_log('[TRADER CREATE MISSING SHOP] ' . ($err['message'] ?? 'unknown error'));
+            oci_rollback($conn);
+            return false;
+        }
+    }
+
+    error_log('[TRADER CREATE MISSING SHOP] Could not allocate a unique shop ID.');
+    oci_rollback($conn);
+    return false;
 }
 
 function trader_categories($conn): array

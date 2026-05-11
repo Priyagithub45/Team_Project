@@ -5,6 +5,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 $current_page = basename($_SERVER['PHP_SELF']);
 $page_title = isset($page_title) ? $page_title : 'Cleckhuddesfax Online Mart';
+$is_customer_logged_in = isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer';
+$customer_name = $is_customer_logged_in ? (string)($_SESSION['user_name'] ?? 'Customer') : '';
 $flash_success = $_SESSION['flash_success'] ?? '';
 $flash_error = $_SESSION['flash_error'] ?? '';
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
@@ -59,9 +61,9 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
             <nav class="main-nav">
                 <a href="index.php" class="<?php echo $current_page == 'index.php' ? 'active' : ''; ?>">HOME</a>
                 <a href="category.php" class="<?php echo $current_page == 'category.php' ? 'active' : ''; ?>">CATEGORY</a>
-                <?php if (isset($_SESSION['user_id'])): ?>
+                <?php if ($is_customer_logged_in): ?>
                     <!-- User is logged in: show their name and a Logout link -->
-                    <span style="color:#f97316; font-weight:600;"><?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
+                    <span style="color:#f97316; font-weight:600;"><?php echo htmlspecialchars($customer_name); ?></span>
                     <a href="logout.php">LOGOUT</a>
                 <?php else: ?>
                     <!-- User is NOT logged in: show Login and Register links -->

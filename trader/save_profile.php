@@ -1,5 +1,6 @@
 <?php
 require_once 'auth_check.php';
+require_once 'product_helpers.php';
 require_once 'profile_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -97,6 +98,7 @@ $data = [
 ];
 
 $errors = [];
+trader_current_shop($conn, $current_trader_id);
 $current_profile = trader_fetch_profile($conn, $current_trader_id);
 
 if (!$current_profile || empty($current_profile['SHOP_ID'])) {

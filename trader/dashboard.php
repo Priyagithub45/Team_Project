@@ -67,7 +67,8 @@ function dashboard_rows($conn, string $sql, int $trader_id): array
 }
 
 $trader_id = (int)$current_trader_id;
-$shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop');
+$current_shop = trader_current_shop($conn, $trader_id);
+$shop_name = (string)($current_shop['SHOP_NAME'] ?? $current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop');
 $trader_name = (string)($current_trader['NAME'] ?? 'Trader');
 $trader_status = strtoupper(trim((string)($current_trader['TRADER_STATUS'] ?? 'ACTIVE')));
 if ($trader_status === '') {

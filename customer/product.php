@@ -49,7 +49,9 @@ $in_stock = ((int)$row['STOCK_QUANTITY'] > 0);
 $min_qty  = max(1, (int)($row['MIN_ORDER'] ?? 1));
 $max_qty  = (int)($row['MAX_ORDER'] ?? 99);
 $product_id = (string)(int)$row['PRODUCT_ID'];
-$current_user_id = isset($_SESSION['user_id']) ? (string)(int)$_SESSION['user_id'] : null;
+$current_user_id = (isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer')
+    ? (string)(int)$_SESSION['user_id']
+    : null;
 
 $reviews = [];
 $stmt = oci_parse($conn, "SELECT r.REVIEW_ID, r.RATING, r.COMMENT_TEXT, r.REVIEW_DATE,

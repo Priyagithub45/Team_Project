@@ -10,6 +10,7 @@ function h(string $value): string
 $flash = trader_flash_get();
 $has_status = trader_product_status_column_exists($conn);
 $has_image = trader_product_image_column_exists($conn);
+$current_shop = trader_current_shop($conn, $current_trader_id);
 $status_select = $has_status ? ", NVL(p.STATUS, 'ACTIVE') AS STATUS" : ", 'ACTIVE' AS STATUS";
 $image_select = $has_image ? ", p.IMAGE_PATH" : ", NULL AS IMAGE_PATH";
 $status_filter = $has_status ? "AND NVL(UPPER(p.STATUS), 'ACTIVE') <> 'DISCONTINUED'" : '';
@@ -44,16 +45,29 @@ oci_free_statement($stmt);
 function product_image_src_for_trader(array $product): string
 {
     $path = trim((string)($product['IMAGE_PATH'] ?? ''));
-    if ($path === '') {
+    if ($path !== '') {
+        $path = ltrim(str_replace('\\', '/', $path), '/');
+        if (file_exists(dirname(__DIR__) . '/' . $path)) {
+            return '../' . implode('/', array_map('rawurlencode', explode('/', $path)));
+        }
+    }
+
+    $slug = strtolower(trim((string)($product['PRODUCT_NAME'] ?? '')));
+    $slug = preg_replace('/[^a-z0-9]+/', '_', $slug);
+    $slug = trim((string)$slug, '_');
+
+    if ($slug === '') {
         return '';
     }
 
-    $path = ltrim(str_replace('\\', '/', $path), '/');
-    if (!file_exists(dirname(__DIR__) . '/' . $path)) {
-        return '';
+    foreach (['jpg', 'jpeg', 'png', 'webp'] as $extension) {
+        $fallback_path = 'uploads/products/' . $slug . '.' . $extension;
+        if (file_exists(dirname(__DIR__) . '/' . $fallback_path)) {
+            return '../' . implode('/', array_map('rawurlencode', explode('/', $fallback_path)));
+        }
     }
 
-    return '../' . implode('/', array_map('rawurlencode', explode('/', $path)));
+    return '';
 }
 
 function product_stock_label(int $stock): string
@@ -90,7 +104,7 @@ function product_stock_class(int $stock): string
 <div class="sidebar">
   <div class="sidebar-brand">
     <img src="logo1.png" alt="Cleckhuddesfax Online Mart" width="36" height="36">
-    <h2><?= h((string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop')) ?></h2>
+    <h2><?= h((string)($current_shop['SHOP_NAME'] ?? $current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop')) ?></h2>
     <span class="sidebar-label">Trader Portal</span>
   </div>
   <nav>
@@ -117,7 +131,7 @@ function product_stock_class(int $stock): string
   <section class="dashboard-hero">
     <div>
       <span class="apply-eyebrow">Inventory</span>
-      <h1><?= h((string)($current_trader['SHOP_NAME'] ?? 'Your Shop')) ?></h1>
+      <h1><?= h((string)($current_shop['SHOP_NAME'] ?? $current_trader['SHOP_NAME'] ?? 'Your Shop')) ?></h1>
       <p>Only products owned by your trader account are shown here.</p>
     </div>
     <div class="dashboard-hero-meta">

@@ -1,5 +1,6 @@
 <?php
 require_once 'auth_check.php';
+require_once 'product_helpers.php';
 require_once 'profile_helpers.php';
 
 function h(string $value): string
@@ -7,6 +8,7 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+trader_current_shop($conn, $current_trader_id);
 $profile = trader_fetch_profile($conn, $current_trader_id);
 if (!$profile) {
     $profile = $current_trader;

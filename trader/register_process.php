@@ -48,9 +48,38 @@ function count_query($conn, string $sql, array $params, array &$errors, string $
     return (int)($row['CNT'] ?? 0);
 }
 
+function table_column_exists($conn, string $table_name, string $column_name): bool
+{
+    $stmt = oci_parse(
+        $conn,
+        'SELECT COUNT(*) AS CNT
+         FROM USER_TAB_COLUMNS
+         WHERE TABLE_NAME = UPPER(:table_name)
+           AND COLUMN_NAME = UPPER(:column_name)'
+    );
+
+    if (!$stmt) {
+        return false;
+    }
+
+    oci_bind_by_name($stmt, ':table_name', $table_name);
+    oci_bind_by_name($stmt, ':column_name', $column_name);
+
+    if (!oci_execute($stmt)) {
+        oci_free_statement($stmt);
+        return false;
+    }
+
+    $row = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    return (int)($row['CNT'] ?? 0) > 0;
+}
+
 $owner_name = post_string('owner_name');
 $email = post_string('email');
 $phone = post_string('phone');
+$license_no = post_string('license_no');
 $address = post_string('address');
 $shop_name = post_string('shop_name');
 $category_raw = post_string('category_id');
@@ -61,6 +90,7 @@ $old = [
     'owner_name' => $owner_name,
     'email' => $email,
     'phone' => $phone,
+    'license_no' => $license_no,
     'address' => $address,
     'shop_name' => $shop_name,
     'business_description' => $business_description,
@@ -83,6 +113,12 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 if ($phone !== '' && strlen($phone) > 20) {
     $errors[] = 'Phone number must be 20 characters or fewer.';
+}
+
+if ($license_no === '') {
+    $errors[] = 'Trading license number is required.';
+} elseif (strlen($license_no) > 50) {
+    $errors[] = 'Trading license number must be 50 characters or fewer.';
 }
 
 if ($address === '') {
@@ -189,37 +225,50 @@ if ($application_shop_count !== null && $application_shop_count > 0) {
     $errors[] = 'A pending or approved trader application already exists for this shop name.';
 }
 
+$has_license_column = table_column_exists($conn, 'TRADER_APPLICATION', 'LICENSE_NO');
+
 if (!empty($errors)) {
     redirect_with_errors($errors, $old);
 }
 
-$insert_sql = "
-    INSERT INTO TRADER_APPLICATION (
-        APPLICATION_ID,
-        OWNER_NAME,
-        EMAIL,
-        PHONE_NO,
-        ADDRESS,
-        PROPOSED_SHOP_NAME,
-        CATEGORY_ID,
-        BUSINESS_DESCRIPTION,
-        NOTES,
-        STATUS,
-        CREATED_AT
-    ) VALUES (
-        TRADER_APPLICATION_SEQ.NEXTVAL,
-        :owner_name,
-        :email,
-        :phone,
-        :address,
-        :shop_name,
-        :category_id,
-        :business_description,
-        :notes,
-        'PENDING',
-        SYSTIMESTAMP
-    )
-";
+$columns = [
+    'APPLICATION_ID',
+    'OWNER_NAME',
+    'EMAIL',
+    'PHONE_NO',
+    'ADDRESS',
+    'PROPOSED_SHOP_NAME',
+];
+$values = [
+    'TRADER_APPLICATION_SEQ.NEXTVAL',
+    ':owner_name',
+    ':email',
+    ':phone',
+    ':address',
+    ':shop_name',
+];
+
+if ($has_license_column) {
+    $columns[] = 'LICENSE_NO';
+    $values[] = ':license_no';
+}
+
+$columns = array_merge($columns, [
+    'CATEGORY_ID',
+    'BUSINESS_DESCRIPTION',
+    'NOTES',
+    'STATUS',
+    'CREATED_AT',
+]);
+$values = array_merge($values, [
+    ':category_id',
+    ':business_description',
+    ':notes',
+    "'PENDING'",
+    'SYSTIMESTAMP',
+]);
+
+$insert_sql = 'INSERT INTO TRADER_APPLICATION (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')';
 
 $stmt = oci_parse($conn, $insert_sql);
 if (!$stmt) {
@@ -233,6 +282,9 @@ oci_bind_by_name($stmt, ':email', $email);
 oci_bind_by_name($stmt, ':phone', $phone);
 oci_bind_by_name($stmt, ':address', $address);
 oci_bind_by_name($stmt, ':shop_name', $shop_name);
+if ($has_license_column) {
+    oci_bind_by_name($stmt, ':license_no', $license_no);
+}
 oci_bind_by_name($stmt, ':category_id', $category_id);
 oci_bind_by_name($stmt, ':business_description', $business_description);
 oci_bind_by_name($stmt, ':notes', $notes);

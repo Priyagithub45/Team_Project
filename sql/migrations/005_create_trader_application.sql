@@ -15,6 +15,7 @@ BEGIN
                 PHONE_NO VARCHAR2(20),
                 ADDRESS VARCHAR2(200),
                 PROPOSED_SHOP_NAME VARCHAR2(100) NOT NULL,
+                LICENSE_NO VARCHAR2(50),
                 CATEGORY_ID NUMBER,
                 BUSINESS_DESCRIPTION VARCHAR2(500),
                 NOTES VARCHAR2(500),
@@ -29,6 +30,21 @@ BEGIN
                 CONSTRAINT FK_TRADER_APP_USER FOREIGN KEY (APPROVED_USER_ID) REFERENCES SYSTEM_USER(USER_ID),
                 CONSTRAINT CK_TRADER_APP_STATUS CHECK (STATUS IN (''PENDING'', ''APPROVED'', ''REJECTED''))
             )';
+    END IF;
+END;
+/
+
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM user_tab_columns
+    WHERE table_name = 'TRADER_APPLICATION'
+      AND column_name = 'LICENSE_NO';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE TRADER_APPLICATION ADD LICENSE_NO VARCHAR2(50)';
     END IF;
 END;
 /
@@ -82,6 +98,7 @@ SELECT ta.APPLICATION_ID,
        ta.PHONE_NO,
        ta.ADDRESS,
        ta.PROPOSED_SHOP_NAME,
+       ta.LICENSE_NO,
        c.CATEGORY_NAME,
        ta.BUSINESS_DESCRIPTION,
        ta.NOTES,

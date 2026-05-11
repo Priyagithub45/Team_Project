@@ -107,6 +107,13 @@ function old_value(array $old, string $key): string
                             <input type="text" id="phone" name="phone" maxlength="20" value="<?= old_value($old, 'phone') ?>">
                         </div>
                         <div class="field">
+                            <label for="license_no">Trading License Number</label>
+                            <input type="text" id="license_no" name="license_no" maxlength="50" required value="<?= old_value($old, 'license_no') ?>">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field">
                             <label for="shop_name">Proposed Shop Name</label>
                             <input type="text" id="shop_name" name="shop_name" maxlength="100" required value="<?= old_value($old, 'shop_name') ?>">
                         </div>

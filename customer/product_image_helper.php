@@ -77,6 +77,31 @@ function product_image_asset_src(string $filename): string
     return '';
 }
 
+function product_image_slug(string $value): string
+{
+    $value = strtolower(trim($value));
+    $value = preg_replace('/[^a-z0-9]+/', '_', $value);
+
+    return trim((string)$value, '_');
+}
+
+function product_uploaded_image_src(array $product): string
+{
+    $slug = product_image_slug((string)($product['PRODUCT_NAME'] ?? ''));
+    if ($slug === '') {
+        return '';
+    }
+
+    foreach (['jpg', 'jpeg', 'png', 'webp'] as $extension) {
+        $path = 'uploads/products/' . $slug . '.' . $extension;
+        if (file_exists(dirname(__DIR__) . '/' . $path)) {
+            return '../' . product_image_url_encode_path($path);
+        }
+    }
+
+    return '';
+}
+
 function product_image_normalize(string $value): string
 {
     $value = strtolower($value);
@@ -208,6 +233,11 @@ function product_image_src(array $product): string
         if (file_exists($file_path)) {
             return '../' . product_image_url_encode_path($image_path);
         }
+    }
+
+    $uploaded_src = product_uploaded_image_src($product);
+    if ($uploaded_src !== '') {
+        return $uploaded_src;
     }
 
     $name = (string)($product['PRODUCT_NAME'] ?? '');
