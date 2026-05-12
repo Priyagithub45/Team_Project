@@ -9,14 +9,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 [$data, $errors] = trader_validate_product_input();
-$shop = trader_current_shop($conn, $current_trader_id);
+$shop_id_input = filter_input(INPUT_POST, 'shop_id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$shop = $shop_id_input ? trader_fetch_owned_shop($conn, (int)$shop_id_input, $current_trader_id) : null;
 
 if (!$shop) {
-    $errors[] = 'No shop is linked to this trader account.';
+    $errors['shop_id'] = 'Please select one of your shops for this product.';
+} else {
+    $_SESSION['trader_selected_shop_id'] = (int)$shop['SHOP_ID'];
 }
 
 if (($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-    $errors[] = 'Please upload a product image.';
+    $errors['image'] = 'Please upload a product image.';
 }
 
 if (!empty($errors)) {

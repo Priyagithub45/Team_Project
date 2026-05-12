@@ -92,7 +92,7 @@ function trader_profile_old_get(): array
     return is_array($old) ? $old : [];
 }
 
-function trader_fetch_profile($conn, int $trader_id): ?array
+function trader_fetch_profile($conn, int $trader_id, ?int $shop_id = null): ?array
 {
     $description_select = trader_shop_description_column_exists($conn)
         ? ', s.DESCRIPTION AS SHOP_DESCRIPTION'
@@ -119,7 +119,10 @@ function trader_fetch_profile($conn, int $trader_id): ?array
         FROM SYSTEM_USER su
         JOIN TRADER t ON t.USER_ID = su.USER_ID
         LEFT JOIN SHOP s ON s.TRADER_ID = t.USER_ID
+            AND (:shop_id IS NULL OR s.SHOP_ID = :shop_id)
         WHERE su.USER_ID = :trader_id
+        ORDER BY s.SHOP_ID
+        FETCH FIRST 1 ROW ONLY
     ";
 
     $stmt = oci_parse($conn, $sql);
@@ -128,6 +131,7 @@ function trader_fetch_profile($conn, int $trader_id): ?array
     }
 
     oci_bind_by_name($stmt, ':trader_id', $trader_id);
+    oci_bind_by_name($stmt, ':shop_id', $shop_id);
     if (!oci_execute($stmt)) {
         oci_free_statement($stmt);
         return null;

@@ -1,5 +1,6 @@
 <?php
 require_once 'auth_check.php';
+require_once 'product_helpers.php';
 
 function h(string $value): string
 {
@@ -63,6 +64,8 @@ function donut_segment_path(float $cx, float $cy, float $outer, float $inner, fl
 
 $selected_month = valid_report_month($_GET['month'] ?? null);
 $sort = strtoupper(trim((string)($_GET['sort'] ?? 'INCOME')));
+$shop_context = trader_shop_context($conn, $current_trader_id, true);
+$shop_filter_sql = trader_shop_filter_sql($shop_context);
 $sort_options = [
     'NAME' => 'p.PRODUCT_NAME ASC',
     'ORDERS' => 'TOTAL_ORDERS DESC, p.PRODUCT_NAME ASC',
@@ -85,6 +88,7 @@ $sales_sql = "
     JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND TRUNC(o.ORDER_DATE, 'MM') = TO_DATE(:selected_month || '-01', 'YYYY-MM-DD')
       {$report_order_status_sql}
     GROUP BY p.PRODUCT_ID, p.PRODUCT_NAME
@@ -94,6 +98,7 @@ $sales_sql = "
 $stmt = oci_parse($conn, $sales_sql);
 oci_bind_by_name($stmt, ':trader_id', $current_trader_id);
 oci_bind_by_name($stmt, ':selected_month', $selected_month);
+trader_bind_shop_filter($stmt, $shop_context);
 oci_execute($stmt);
 
 $sales_rows = [];
@@ -111,6 +116,7 @@ $totals_sql = "
     JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND TRUNC(o.ORDER_DATE, 'MM') = TO_DATE(:selected_month || '-01', 'YYYY-MM-DD')
       {$report_order_status_sql}
 ";
@@ -118,6 +124,7 @@ $totals_sql = "
 $totals_stmt = oci_parse($conn, $totals_sql);
 oci_bind_by_name($totals_stmt, ':trader_id', $current_trader_id);
 oci_bind_by_name($totals_stmt, ':selected_month', $selected_month);
+trader_bind_shop_filter($totals_stmt, $shop_context);
 oci_execute($totals_stmt);
 $totals = oci_fetch_assoc($totals_stmt) ?: [];
 oci_free_statement($totals_stmt);
@@ -171,7 +178,8 @@ foreach ($chart_rows as $index => $row) {
     $chart_start += $angle;
 }
 
-$shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop');
+$shop_name = trader_shop_context_label($shop_context, 'All shops');
+$account_name = trader_account_label($current_trader);
 $month_label = date('F Y', strtotime($selected_month . '-01'));
 ?>
 <!doctype html>
@@ -186,7 +194,7 @@ $month_label = date('F Y', strtotime($selected_month . '-01'));
 <div class="sidebar">
   <div class="sidebar-brand">
     <img src="logo1.png" alt="Cleckhuddesfax Online Mart" width="36" height="36">
-    <h2><?= h($shop_name) ?></h2>
+    <h2><?= h($account_name) ?></h2>
     <span class="sidebar-label">Trader Portal</span>
   </div>
   <nav>
@@ -198,6 +206,7 @@ $month_label = date('F Y', strtotime($selected_month . '-01'));
     <a href="reports_monthly_sales.php" class="active">Monthly Sales</a>
     <a href="profile.php">Profile</a>
   </nav>
+  <?php trader_render_shop_switcher($shop_context); ?>
   <div class="sidebar-footer-link">
     <a href="logout.php">Sign Out</a>
   </div>
@@ -210,7 +219,7 @@ $month_label = date('F Y', strtotime($selected_month . '-01'));
     <div>
       <span class="apply-eyebrow">Product Performance</span>
       <h1><?= h($shop_name) ?></h1>
-      <p>Monthly totals are calculated directly from your ORDER_ITEM rows, grouped by your own products.</p>
+      <p>Monthly totals are grouped by products from the selected shop view.</p>
     </div>
     <div class="dashboard-hero-meta">
       <a href="reports_weekly_finance.php" class="btn btn-primary">Weekly Finance</a>

@@ -100,37 +100,37 @@ $old = [
 $errors = [];
 
 if ($owner_name === '') {
-    $errors[] = 'Owner/full name is required.';
+    $errors['owner_name'] = 'Owner/full name is required.';
 } elseif (strlen($owner_name) > 100) {
-    $errors[] = 'Owner/full name must be 100 characters or fewer.';
+    $errors['owner_name'] = 'Owner/full name must be 100 characters or fewer.';
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'A valid email address is required.';
+    $errors['email'] = 'Enter a valid email address.';
 } elseif (strlen($email) > 100) {
-    $errors[] = 'Email must be 100 characters or fewer.';
+    $errors['email'] = 'Email must be 100 characters or fewer.';
 }
 
 if ($phone !== '' && strlen($phone) > 20) {
-    $errors[] = 'Phone number must be 20 characters or fewer.';
+    $errors['phone'] = 'Phone number must be 20 characters or fewer.';
 }
 
 if ($license_no === '') {
-    $errors[] = 'Trading license number is required.';
+    $errors['license_no'] = 'Trading license number is required.';
 } elseif (strlen($license_no) > 50) {
-    $errors[] = 'Trading license number must be 50 characters or fewer.';
+    $errors['license_no'] = 'Trading license number must be 50 characters or fewer.';
 }
 
 if ($address === '') {
-    $errors[] = 'Address is required.';
+    $errors['address'] = 'Address is required.';
 } elseif (strlen($address) > 200) {
-    $errors[] = 'Address must be 200 characters or fewer.';
+    $errors['address'] = 'Address must be 200 characters or fewer.';
 }
 
 if ($shop_name === '') {
-    $errors[] = 'Proposed shop name is required.';
+    $errors['shop_name'] = 'Proposed shop name is required.';
 } elseif (strlen($shop_name) > 100) {
-    $errors[] = 'Proposed shop name must be 100 characters or fewer.';
+    $errors['shop_name'] = 'Proposed shop name must be 100 characters or fewer.';
 }
 
 $category_id = null;
@@ -166,7 +166,7 @@ $account_count = count_query(
 );
 
 if ($account_count !== null && $account_count > 0) {
-    $errors[] = 'An account already exists with this email address.';
+    $errors['email'] = 'An account already exists with this email address.';
 }
 
 if ($category_id !== null) {
@@ -192,7 +192,7 @@ $shop_count = count_query(
 );
 
 if ($shop_count !== null && $shop_count > 0) {
-    $errors[] = 'That shop name is already in use.';
+    $errors['shop_name'] = 'That shop name is already in use.';
 }
 
 $application_email_count = count_query(
@@ -207,7 +207,7 @@ $application_email_count = count_query(
 );
 
 if ($application_email_count !== null && $application_email_count > 0) {
-    $errors[] = 'A pending or approved trader application already exists for this email address.';
+    $errors['email'] = 'A pending or approved application already exists for this email address.';
 }
 
 $application_shop_count = count_query(
@@ -222,7 +222,7 @@ $application_shop_count = count_query(
 );
 
 if ($application_shop_count !== null && $application_shop_count > 0) {
-    $errors[] = 'A pending or approved trader application already exists for this shop name.';
+    $errors['shop_name'] = 'A pending or approved application already exists for this shop name.';
 }
 
 $has_license_column = table_column_exists($conn, 'TRADER_APPLICATION', 'LICENSE_NO');

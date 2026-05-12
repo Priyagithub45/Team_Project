@@ -10,7 +10,10 @@ function h(string $value): string
 $flash = trader_flash_get();
 $has_status = trader_product_status_column_exists($conn);
 $has_image = trader_product_image_column_exists($conn);
-$current_shop = trader_current_shop($conn, $current_trader_id);
+$shop_context = trader_shop_context($conn, $current_trader_id, true);
+$shop_filter_sql = trader_shop_filter_sql($shop_context);
+$shop_name = trader_shop_context_label($shop_context, 'All shops');
+$account_name = trader_account_label($current_trader);
 $status_select = $has_status ? ", NVL(p.STATUS, 'ACTIVE') AS STATUS" : ", 'ACTIVE' AS STATUS";
 $image_select = $has_image ? ", p.IMAGE_PATH" : ", NULL AS IMAGE_PATH";
 $status_filter = $has_status ? "AND NVL(UPPER(p.STATUS), 'ACTIVE') <> 'DISCONTINUED'" : '';
@@ -28,12 +31,14 @@ $sql = "
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     LEFT JOIN CATEGORY c ON c.CATEGORY_ID = p.CATEGORY_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       {$status_filter}
     ORDER BY p.PRODUCT_NAME
 ";
 
 $stmt = oci_parse($conn, $sql);
 oci_bind_by_name($stmt, ':trader_id', $current_trader_id);
+trader_bind_shop_filter($stmt, $shop_context);
 oci_execute($stmt);
 
 $products = [];
@@ -104,7 +109,7 @@ function product_stock_class(int $stock): string
 <div class="sidebar">
   <div class="sidebar-brand">
     <img src="logo1.png" alt="Cleckhuddesfax Online Mart" width="36" height="36">
-    <h2><?= h((string)($current_shop['SHOP_NAME'] ?? $current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop')) ?></h2>
+    <h2><?= h($account_name) ?></h2>
     <span class="sidebar-label">Trader Portal</span>
   </div>
   <nav>
@@ -116,6 +121,7 @@ function product_stock_class(int $stock): string
     <a href="reports_monthly_sales.php">Monthly Sales</a>
     <a href="profile.php">Profile</a>
   </nav>
+  <?php trader_render_shop_switcher($shop_context); ?>
   <div class="sidebar-footer-link">
     <a href="logout.php">Sign Out</a>
   </div>
@@ -131,8 +137,8 @@ function product_stock_class(int $stock): string
   <section class="dashboard-hero">
     <div>
       <span class="apply-eyebrow">Inventory</span>
-      <h1><?= h((string)($current_shop['SHOP_NAME'] ?? $current_trader['SHOP_NAME'] ?? 'Your Shop')) ?></h1>
-      <p>Only products owned by your trader account are shown here.</p>
+      <h1><?= h($shop_name) ?></h1>
+      <p>Use the shop selector to view all products or one shop's catalogue.</p>
     </div>
     <div class="dashboard-hero-meta">
       <a href="add_product.php" class="btn btn-primary">Add Product</a>
@@ -156,6 +162,7 @@ function product_stock_class(int $stock): string
             <tr>
               <th>Image</th>
               <th>Product</th>
+              <th>Shop</th>
               <th>Category</th>
               <th>Price</th>
               <th>Stock</th>
@@ -181,6 +188,7 @@ function product_stock_class(int $stock): string
                   </div>
                 </td>
                 <td><?= h((string)$product['PRODUCT_NAME']) ?></td>
+                <td><?= h((string)($product['SHOP_NAME'] ?? '-')) ?></td>
                 <td><?= h((string)($product['CATEGORY_NAME'] ?? '-')) ?></td>
                 <td>GBP <?= h(number_format((float)$product['PRICE'], 2)) ?></td>
                 <td><?= h((string)$stock) ?></td>

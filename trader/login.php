@@ -66,15 +66,16 @@ function h(string $value): string
                 </div>
             <?php endif; ?>
 
-            <form method="post" action="login_process.php" autocomplete="off">
+            <form method="post" action="login_process.php" autocomplete="off" novalidate>
                 <div class="field">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" required value="<?= h((string)($old['email'] ?? '')) ?>">
+                    <label for="email">Email Address <span class="required-star" aria-hidden="true">*</span></label>
+                    <input type="email" id="email" name="email" required autocomplete="email"
+                           value="<?= h((string)($old['email'] ?? '')) ?>">
                 </div>
 
                 <div class="field">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
+                    <label for="password">Password <span class="required-star" aria-hidden="true">*</span></label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
                 </div>
 
                 <div class="form-actions">

@@ -23,6 +23,14 @@ if (!$existing) {
 }
 
 [$data, $errors] = trader_validate_product_input();
+$shop_id_input = filter_input(INPUT_POST, 'shop_id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$shop = $shop_id_input ? trader_fetch_owned_shop($conn, (int)$shop_id_input, $current_trader_id) : null;
+
+if (!$shop) {
+    $errors['shop_id'] = 'Please select one of your shops for this product.';
+} else {
+    $_SESSION['trader_selected_shop_id'] = (int)$shop['SHOP_ID'];
+}
 
 if (!empty($errors)) {
     trader_product_errors_set($errors);
@@ -52,6 +60,7 @@ $set_parts = [
     'PRICE = :price',
     'STOCK_QUANTITY = :stock_quantity',
     'EXPIRY_DATE = ' . ($data['expiry_date'] === '' ? 'NULL' : "TO_DATE(:expiry_date, 'YYYY-MM-DD')"),
+    'SHOP_ID = :shop_id',
     'CATEGORY_ID = :category_id',
     'QUANTITY_PER_ITEM = :quantity_per_item',
     'MIN_ORDER = :min_order',
@@ -94,6 +103,7 @@ $expiry_date = $data['expiry_date'];
 $product_name = (string)$data['product_name'];
 $price = (float)$data['price'];
 $stock_quantity = (int)$data['stock_quantity'];
+$shop_id = (int)$shop['SHOP_ID'];
 $category_id = (int)$data['category_id'];
 $quantity_per_item = $data['quantity_per_item'];
 $min_order = $data['min_order'];
@@ -107,6 +117,7 @@ oci_bind_by_name($stmt, ':stock_quantity', $stock_quantity);
 if ($data['expiry_date'] !== '') {
     oci_bind_by_name($stmt, ':expiry_date', $expiry_date);
 }
+oci_bind_by_name($stmt, ':shop_id', $shop_id);
 oci_bind_by_name($stmt, ':category_id', $category_id);
 oci_bind_by_name($stmt, ':quantity_per_item', $quantity_per_item);
 oci_bind_by_name($stmt, ':min_order', $min_order);

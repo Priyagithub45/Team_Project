@@ -23,7 +23,7 @@ function render_product_card(array $product): void
         </div>
         <div class="product-list-info">
             <span class="product-list-name"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></span>
-            <span class="product-list-price">$<?php echo number_format((float)($product['PRICE'] ?? 0), 2); ?></span>
+            <span class="product-list-price">GBP <?php echo number_format((float)($product['PRICE'] ?? 0), 2); ?></span>
         </div>
         <div class="search-card-meta">
             <span><?php echo htmlspecialchars($product['SHOP_NAME'] ?? 'Local trader', ENT_QUOTES, 'UTF-8'); ?></span>

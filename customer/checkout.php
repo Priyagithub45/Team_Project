@@ -123,14 +123,6 @@ $user = oci_fetch_assoc($stmt);
 oci_free_statement($stmt);
 
 // ── Payment methods ───────────────────────────────────────────────────────────
-$stmt = oci_parse($conn, "SELECT METHOD_ID, METHOD_NAME FROM PAYMENT_METHOD ORDER BY METHOD_NAME");
-oci_execute($stmt);
-$methods = [];
-while ($row = oci_fetch_assoc($stmt)) {
-    $methods[] = $row;
-}
-oci_free_statement($stmt);
-
 // ── Flash error from place_order.php ─────────────────────────────────────────
 $order_error = '';
 if (!empty($_SESSION['order_error'])) {
@@ -222,8 +214,8 @@ include 'header.php';
                     <tr>
                         <td><?php echo htmlspecialchars($item['PRODUCT_NAME']); ?></td>
                         <td><?php echo (int)$item['QUANTITY']; ?></td>
-                        <td>£<?php echo number_format((float)$item['PRICE'], 2); ?></td>
-                        <td><strong>£<?php echo number_format((float)$item['LINE_TOTAL'], 2); ?></strong></td>
+                        <td>GBP <?php echo number_format((float)$item['PRICE'], 2); ?></td>
+                        <td><strong>GBP <?php echo number_format((float)$item['LINE_TOTAL'], 2); ?></strong></td>
                     </tr>
                     <?php endforeach; ?>
                     <?php endforeach; ?>
@@ -234,43 +226,31 @@ include 'header.php';
             <div class="invoice-totals">
                 <div class="invoice-total-row grand-total-row">
                     <span>TOTAL TO PAY:</span>
-                    <span>£<?php echo number_format($cart_total, 2); ?></span>
+                    <span>GBP <?php echo number_format($cart_total, 2); ?></span>
                 </div>
             </div>
 
             <!-- Place Order Form -->
-            <form method="post" action="place_order.php" style="margin-top:1.5rem;">
+            <form method="post" action="place_order.php" id="checkout-payment-form" style="margin-top:1.5rem;">
 
                 <div style="margin-bottom:1rem;">
                     <label style="display:block;font-weight:600;margin-bottom:0.4rem;">PAYMENT METHOD</label>
-                    <?php if (empty($methods)): ?>
-                        <input type="hidden" name="method_id" value="0">
-                        <p style="color:#888;font-size:0.9rem;">Payment on collection (cash).</p>
-                    <?php else: ?>
-                        <select name="method_id" required
-                                style="width:100%;padding:0.6rem;border:1px solid #ddd;border-radius:4px;font-family:inherit;">
-                            <option value="">— Select payment method —</option>
-                            <?php foreach ($methods as $m): ?>
-                            <option value="<?php echo (int)$m['METHOD_ID']; ?>">
-                                <?php echo htmlspecialchars($m['METHOD_NAME']); ?>
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
-                    <?php endif; ?>
+                    <select name="payment_choice" id="payment-choice" required
+                            style="width:100%;padding:0.6rem;border:1px solid #ddd;border-radius:4px;font-family:inherit;">
+                        <option value="">&mdash; Select payment method &mdash;</option>
+                        <option value="cash">Cash</option>
+                        <option value="paypal">PayPal Sandbox</option>
+                    </select>
+                    <p id="payment-choice-note" style="color:#888;font-size:0.9rem;margin-top:0.45rem;">
+                        Choose Cash to pay at collection, or PayPal Sandbox to pay online now.
+                    </p>
                 </div>
 
-                <button type="submit" class="btn-confirm"
+                <button type="submit" class="btn-confirm" id="checkout-submit-button"
                         style="width:100%;padding:0.9rem;font-size:1rem;margin-top:0.5rem;">
                     PLACE ORDER
                 </button>
 
-            </form>
-
-            <form method="post" action="paypal_start.php" style="margin-top:0.75rem;">
-                <button type="submit" class="btn-confirm"
-                        style="width:100%;padding:0.9rem;font-size:1rem;background:#ffc439;color:#111;border-color:#ffc439;">
-                    PAY WITH PAYPAL SANDBOX
-                </button>
             </form>
 
             <p style="text-align:center;margin-top:0.75rem;">
@@ -284,5 +264,36 @@ include 'header.php';
         </div>
     </div>
 </section>
+
+<script>
+const paymentForm = document.getElementById('checkout-payment-form');
+const paymentChoice = document.getElementById('payment-choice');
+const submitButton = document.getElementById('checkout-submit-button');
+const paymentNote = document.getElementById('payment-choice-note');
+
+function refreshPaymentButton() {
+    if (paymentChoice.value === 'paypal') {
+        paymentForm.action = 'paypal_start.php';
+        submitButton.textContent = 'PAY WITH PAYPAL SANDBOX';
+        submitButton.style.background = '#ffc439';
+        submitButton.style.borderColor = '#ffc439';
+        submitButton.style.color = '#111';
+        paymentNote.textContent = 'You will be redirected to PayPal Sandbox. Payment will be marked as Paid after PayPal returns.';
+        return;
+    }
+
+    paymentForm.action = 'place_order.php';
+    submitButton.textContent = 'PLACE ORDER';
+    submitButton.style.background = '';
+    submitButton.style.borderColor = '';
+    submitButton.style.color = '';
+    paymentNote.textContent = paymentChoice.value === 'cash'
+        ? 'Cash payment will be collected later, so payment status will be Pending.'
+        : 'Choose Cash to pay at collection, or PayPal Sandbox to pay online now.';
+}
+
+paymentChoice.addEventListener('change', refreshPaymentButton);
+refreshPaymentButton();
+</script>
 
 <?php include 'footer.php'; ?>

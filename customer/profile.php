@@ -30,7 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $update_message = 'Profile updated successfully!';
     } else {
         $err = oci_error($update_stmt);
-        $profile_error = 'Could not update profile: ' . ($err['message'] ?? 'unknown error');
+        error_log('[CUSTOMER PROFILE UPDATE] ' . ($err['message'] ?? 'unknown error'));
+        $profile_error = 'Could not update your profile. Please try again.';
     }
     oci_free_statement($update_stmt);
 }
@@ -82,7 +83,8 @@ if (oci_execute($orders_stmt)) {
     }
 } else {
     $err = oci_error($orders_stmt);
-    $orders_error = 'Could not load order history: ' . ($err['message'] ?? 'unknown error');
+    error_log('[CUSTOMER PROFILE ORDERS] ' . ($err['message'] ?? 'unknown error'));
+    $orders_error = 'Could not load your order history. Please try again later.';
 }
 oci_free_statement($orders_stmt);
 
@@ -126,22 +128,22 @@ include 'header.php';
             <input type="hidden" name="update_profile" value="1">
             <div class="profile-grid">
                 <div class="profile-form-group">
-                    <label>FULL NAME</label>
-                    <input type="text" value="<?php echo htmlspecialchars($user_data['NAME'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                    <label for="profile_name">FULL NAME</label>
+                    <input type="text" id="profile_name" value="<?php echo htmlspecialchars($user_data['NAME'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly aria-readonly="true">
                 </div>
                 <div class="profile-form-group">
-                    <label>EMAIL ADDRESS</label>
-                    <input type="email" value="<?php echo htmlspecialchars($user_data['EMAIL'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                    <label for="profile_email">EMAIL ADDRESS</label>
+                    <input type="email" id="profile_email" value="<?php echo htmlspecialchars($user_data['EMAIL'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly aria-readonly="true">
                 </div>
                 <div class="profile-form-group">
-                    <label>PHONE NUMBER</label>
-                    <input type="tel" name="phone" value="<?php echo htmlspecialchars($user_data['PHONE_NO'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                    <label for="profile_phone">PHONE NUMBER <span class="auth-optional">(optional)</span></label>
+                    <input type="tel" id="profile_phone" name="phone" maxlength="20" value="<?php echo htmlspecialchars($user_data['PHONE_NO'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                 </div>
             </div>
 
             <div class="profile-form-group">
-                <label>MAILING ADDRESS</label>
-                <textarea name="address" rows="4"><?php echo htmlspecialchars($user_data['ADDRESS'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                <label for="profile_address">MAILING ADDRESS <span class="auth-optional">(optional)</span></label>
+                <textarea id="profile_address" name="address" rows="4" maxlength="200"><?php echo htmlspecialchars($user_data['ADDRESS'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
             </div>
 
             <button type="submit" class="btn-update">UPDATE CHANGES</button>
@@ -201,7 +203,7 @@ include 'header.php';
                                         <?php echo htmlspecialchars($order['PAYMENT_STATUS'] ?? 'Pending', ENT_QUOTES, 'UTF-8'); ?>
                                     </span>
                                 </td>
-                                <td>&pound;<?php echo number_format((float)($order['TOTAL_AMOUNT'] ?? 0), 2); ?></td>
+                                <td>GBP <?php echo number_format((float)($order['TOTAL_AMOUNT'] ?? 0), 2); ?></td>
                                 <td>
                                     <span class="order-status-pill">
                                         <?php echo htmlspecialchars($order['ORDER_STATUS'] ?? 'Pending', ENT_QUOTES, 'UTF-8'); ?>

@@ -106,9 +106,16 @@ if ($current_user_id !== null) {
     $has_reviewed_product = ((int)($existing_review['CNT'] ?? 0) > 0);
 }
 
+$stock_quantity = (int)$row['STOCK_QUANTITY'];
+$stock_label = $in_stock ? ($stock_quantity <= 5 ? 'Low stock' : 'In stock') : 'Out of stock';
+$stock_class = $in_stock ? ($stock_quantity <= 5 ? 'low' : 'available') : 'out';
+$rating_text = $review_count > 0
+    ? number_format($average_rating, 1) . ' from ' . $review_count . ' review' . ($review_count === 1 ? '' : 's')
+    : 'No reviews yet';
+
 function render_review_stars(int $rating): string
 {
-    $rating = max(1, min(5, $rating));
+    $rating = max(0, min(5, $rating));
     $html = '';
     for ($i = 1; $i <= 5; $i++) {
         $html .= '<span class="material-icons">' . ($i <= $rating ? 'star' : 'star_border') . '</span>';
@@ -148,6 +155,7 @@ if (!empty($_SESSION['review_error'])) {
     <div class="container product-container">
 
         <div class="product-image-col">
+            <div class="product-image-badge"><?= htmlspecialchars($stock_label) ?></div>
             <div class="main-image">
                 <?php render_product_image(
                     $row,
@@ -159,71 +167,89 @@ if (!empty($_SESSION['review_error'])) {
         </div>
 
         <div class="product-info-col">
+            <div class="product-breadcrumb">
+                <a href="category.php">Shops</a>
+                <span>/</span>
+                <span><?php echo htmlspecialchars($row['CATEGORY_NAME']); ?></span>
+            </div>
+
+            <div class="product-shop-chip">
+                <span class="material-icons">storefront</span>
+                <?php echo htmlspecialchars($row['SHOP_NAME']); ?>
+            </div>
+
             <h1 class="product-title"><?php echo htmlspecialchars($row['PRODUCT_NAME']); ?></h1>
 
+            <div class="product-rating-line">
+                <div class="stars-filled"><?php echo $review_count > 0 ? render_review_stars((int)round($average_rating)) : render_review_stars(0); ?></div>
+                <span><?php echo htmlspecialchars($rating_text); ?></span>
+            </div>
+
             <div class="product-price-row">
-                <span class="product-price">$<?php echo number_format((float)$row['PRICE'], 2); ?></span>
+                <span class="product-price">GBP <?php echo number_format((float)$row['PRICE'], 2); ?></span>
             </div>
 
-            <?php if (!empty($row['DESCRIPTION'])): ?>
-            <div class="product-description-box">
-                <h5 class="description-title">DESCRIPTION</h5>
-                <div class="product-description">
-                    <?php echo htmlspecialchars($row['DESCRIPTION']); ?>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($row['ALLERGY_INFO'])): ?>
-            <div class="product-description-box" style="margin-top:0.75rem;">
-                <h5 class="description-title">ALLERGY INFO</h5>
-                <div class="product-description"><?php echo htmlspecialchars($row['ALLERGY_INFO']); ?></div>
-            </div>
-            <?php endif; ?>
-
-            <form method="post" action="add_to_cart.php">
-                <input type="hidden" name="product_id" value="<?php echo (int)$row['PRODUCT_ID']; ?>">
-
-                <div class="product-quantity-row">
-                    <label>QUANTITY</label>
-                    <div class="quantity-wrapper">
-                        <div class="quantity-selector">
-                            <button type="button" class="qty-btn minus">-</button>
-                            <input type="number" name="quantity"
-                                   value="<?php echo $min_qty; ?>"
-                                   min="<?php echo $min_qty; ?>"
-                                   max="<?php echo $max_qty; ?>"
-                                   class="qty-input">
-                            <button type="button" class="qty-btn plus">+</button>
-                        </div>
-                        <div class="stock-status">
-                            <?php if ($in_stock): ?>
-                                <span class="status-dot" style="background:#22c55e;width:10px;height:10px;border-radius:50%;display:inline-block;"></span>
-                                In Stock (<?php echo (int)$row['STOCK_QUANTITY']; ?> available)
-                            <?php else: ?>
-                                <span class="status-dot" style="background:#ef4444;width:10px;height:10px;border-radius:50%;display:inline-block;"></span>
-                                Out of Stock
-                            <?php endif; ?>
-                        </div>
+            <div class="product-purchase-card">
+                <?php if (!empty($row['DESCRIPTION'])): ?>
+                <div class="product-description-box">
+                    <h5 class="description-title">DESCRIPTION</h5>
+                    <div class="product-description">
+                        <?php echo htmlspecialchars($row['DESCRIPTION']); ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
-                <div class="product-actions">
-                    <?php if ($in_stock): ?>
-                        <button type="submit" class="btn btn-primary btn-full">
-                            <span class="material-icons" style="font-size:1.2rem;">shopping_cart</span> ADD TO CART
-                        </button>
-                        <button type="submit" formaction="buy_now.php" class="btn btn-outline btn-full">
-                            <span class="material-icons" style="font-size:1.2rem;">bolt</span> BUY IT NOW
-                        </button>
-                    <?php else: ?>
-                        <button type="button" class="btn btn-primary btn-full"
-                                disabled style="opacity:0.5;cursor:not-allowed;">
-                            <span class="material-icons" style="font-size:1.2rem;">remove_shopping_cart</span> OUT OF STOCK
-                        </button>
-                    <?php endif; ?>
+                <?php if (!empty($row['ALLERGY_INFO'])): ?>
+                <div class="product-description-box allergy-box">
+                    <h5 class="description-title">ALLERGY INFO</h5>
+                    <div class="product-description"><?php echo htmlspecialchars($row['ALLERGY_INFO']); ?></div>
                 </div>
-            </form>
+                <?php endif; ?>
+
+                <form method="post" action="add_to_cart.php">
+                    <input type="hidden" name="product_id" value="<?php echo (int)$row['PRODUCT_ID']; ?>">
+
+                    <div class="product-quantity-row">
+                        <label>QUANTITY</label>
+                        <div class="quantity-wrapper">
+                            <div class="quantity-selector">
+                                <button type="button" class="qty-btn minus">-</button>
+                                <input type="number" name="quantity"
+                                       value="<?php echo $min_qty; ?>"
+                                       min="<?php echo $min_qty; ?>"
+                                       max="<?php echo $max_qty; ?>"
+                                       class="qty-input">
+                                <button type="button" class="qty-btn plus">+</button>
+                            </div>
+                            <div class="stock-status <?= htmlspecialchars($stock_class) ?>">
+                                <?php if ($in_stock): ?>
+                                    <span class="status-dot"></span>
+                                    <?php echo htmlspecialchars($stock_label); ?> (<?php echo $stock_quantity; ?> available)
+                                <?php else: ?>
+                                    <span class="status-dot"></span>
+                                    Out of Stock
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="product-actions">
+                        <?php if ($in_stock): ?>
+                            <button type="submit" class="btn btn-primary btn-full" data-ajax-cart="1">
+                                <span class="material-icons" style="font-size:1.2rem;">shopping_cart</span> ADD TO CART
+                            </button>
+                            <button type="submit" formaction="buy_now.php" class="btn btn-outline btn-full">
+                                <span class="material-icons" style="font-size:1.2rem;">bolt</span> BUY IT NOW
+                            </button>
+                        <?php else: ?>
+                            <button type="button" class="btn btn-primary btn-full"
+                                    disabled style="opacity:0.5;cursor:not-allowed;">
+                                <span class="material-icons" style="font-size:1.2rem;">remove_shopping_cart</span> OUT OF STOCK
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
 
             <div class="product-meta">
                 <div class="meta-row">

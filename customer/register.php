@@ -147,40 +147,74 @@ textarea.auth-input { min-height: 70px; resize: vertical; }
             </div>
         <?php endif; ?>
 
-        <form action="register_process.php" method="POST" autocomplete="off">
+        <p class="auth-form-legend"><span class="required-star" aria-hidden="true">*</span> Required field</p>
 
-            <div class="auth-form-group">
-                <div class="auth-label">FULL NAME</div>
-                <input type="text" class="auth-input" name="name" required
+        <form action="register_process.php" method="POST" autocomplete="off" novalidate>
+
+            <div class="auth-form-group<?= isset($errors['name']) ? ' has-error' : '' ?>">
+                <label for="reg_name" class="auth-label">FULL NAME <span class="required-star" aria-hidden="true">*</span></label>
+                <input type="text" id="reg_name" class="auth-input" name="name" required
+                       autocomplete="name"
+                       aria-required="true"
+                       <?= isset($errors['name']) ? 'aria-invalid="true" aria-describedby="err_name"' : '' ?>
                        value="<?= old($old, 'name') ?>">
+                <?php if (isset($errors['name'])): ?>
+                    <span class="auth-field-error" id="err_name" role="alert"><?= htmlspecialchars($errors['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
             </div>
 
-            <div class="auth-form-group">
-                <div class="auth-label">EMAIL ADDRESS</div>
-                <input type="email" class="auth-input" name="email" required
+            <div class="auth-form-group<?= isset($errors['email']) ? ' has-error' : '' ?>">
+                <label for="reg_email" class="auth-label">EMAIL ADDRESS <span class="required-star" aria-hidden="true">*</span></label>
+                <input type="email" id="reg_email" class="auth-input" name="email" required
+                       autocomplete="email"
+                       aria-required="true"
+                       <?= isset($errors['email']) ? 'aria-invalid="true" aria-describedby="err_email"' : '' ?>
                        value="<?= old($old, 'email') ?>">
+                <?php if (isset($errors['email'])): ?>
+                    <span class="auth-field-error" id="err_email" role="alert"><?= htmlspecialchars($errors['email'], ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
             </div>
 
             <div class="auth-form-group">
-                <div class="auth-label">PHONE NUMBER</div>
-                <input type="text" class="auth-input" name="phone"
-                       placeholder="optional"
+                <label for="reg_phone" class="auth-label">PHONE NUMBER <span class="auth-optional">(optional)</span></label>
+                <input type="tel" id="reg_phone" class="auth-input" name="phone"
+                       autocomplete="tel" maxlength="20"
                        value="<?= old($old, 'phone') ?>">
             </div>
 
-            <div class="auth-form-group">
-                <div class="auth-label">PASSWORD</div>
-                <input type="password" class="auth-input" name="password" required minlength="8">
+            <div class="auth-form-group<?= isset($errors['password']) ? ' has-error' : '' ?>">
+                <label for="reg_password" class="auth-label">PASSWORD <span class="required-star" aria-hidden="true">*</span></label>
+                <input type="password" id="reg_password" class="auth-input" name="password"
+                       required minlength="8" autocomplete="new-password"
+                       aria-required="true"
+                       <?= isset($errors['password']) ? 'aria-invalid="true" aria-describedby="err_password"' : '' ?>>
+                <?php if (isset($errors['password'])): ?>
+                    <span class="auth-field-error" id="err_password" role="alert"><?= htmlspecialchars($errors['password'], ENT_QUOTES, 'UTF-8') ?></span>
+                <?php else: ?>
+                    <span class="auth-field-error" style="color:#666;font-size:0.75rem;">Must be at least 8 characters.</span>
+                <?php endif; ?>
             </div>
 
-            <div class="auth-form-group">
-                <div class="auth-label">CONFIRM PASSWORD</div>
-                <input type="password" class="auth-input" name="confirm_password" required minlength="8">
+            <div class="auth-form-group<?= isset($errors['confirm_password']) ? ' has-error' : '' ?>">
+                <label for="reg_confirm" class="auth-label">CONFIRM PASSWORD <span class="required-star" aria-hidden="true">*</span></label>
+                <input type="password" id="reg_confirm" class="auth-input" name="confirm_password"
+                       required minlength="8" autocomplete="new-password"
+                       aria-required="true"
+                       <?= isset($errors['confirm_password']) ? 'aria-invalid="true" aria-describedby="err_confirm"' : '' ?>>
+                <?php if (isset($errors['confirm_password'])): ?>
+                    <span class="auth-field-error" id="err_confirm" role="alert"><?= htmlspecialchars($errors['confirm_password'], ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
             </div>
 
-            <div class="auth-form-group">
-                <div class="auth-label">HOME ADDRESS</div>
-                <textarea class="auth-input" name="address" required><?= old($old, 'address') ?></textarea>
+            <div class="auth-form-group<?= isset($errors['address']) ? ' has-error' : '' ?>">
+                <label for="reg_address" class="auth-label">HOME ADDRESS <span class="required-star" aria-hidden="true">*</span></label>
+                <textarea id="reg_address" class="auth-input" name="address"
+                          required autocomplete="street-address" maxlength="200"
+                          aria-required="true"
+                          <?= isset($errors['address']) ? 'aria-invalid="true" aria-describedby="err_address"' : '' ?>><?= old($old, 'address') ?></textarea>
+                <?php if (isset($errors['address'])): ?>
+                    <span class="auth-field-error" id="err_address" role="alert"><?= htmlspecialchars($errors['address'], ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
             </div>
 
             <button type="submit" class="btn-auth">REGISTER</button>

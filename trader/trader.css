@@ -69,6 +69,33 @@ body {
   padding: 8px 0;
 }
 
+.shop-switcher {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.shop-switcher label {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(255,255,255,0.7);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.shop-switcher select {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 9px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .sidebar a {
   display: flex;
   align-items: center;
@@ -198,7 +225,32 @@ body {
 }
 
 .alert {
-  display: none;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border-left: 4px solid #dc2626;
+}
+
+.alert-error ul {
+  margin: 4px 0 0;
+  padding-left: 1.4em;
+}
+
+.alert-error li {
+  margin-bottom: 3px;
+}
+
+.alert-success {
+  background: #f0fdf4;
+  color: #14532d;
+  border-left: 4px solid #16a34a;
 }
 
 /* ── Toast notifications ── */
@@ -1964,4 +2016,699 @@ input[type="file"] {
   .collection-label {
     page-break-inside: avoid;
   }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TRADER PORTAL — PREMIUM DESIGN LAYER
+   Depth · Motion · Precision
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(28, 43, 65, 0.06); }
+::-webkit-scrollbar-thumb {
+  background: var(--orange);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: #D94A1A; }
+
+/* ── Global transitions ── */
+a, button, input, select, textarea {
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    color 200ms ease,
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+/* ── Sidebar — gradient depth + shadow wall ── */
+.sidebar {
+  background: linear-gradient(180deg, #1e304a 0%, #182740 40%, #111d2e 100%);
+  box-shadow: 4px 0 28px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-brand {
+  background: linear-gradient(90deg, rgba(237,92,43,0.1), rgba(237,92,43,0.02));
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Sidebar nav items — stronger hover */
+.sidebar a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-left-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Active nav item — orange glow */
+.sidebar a.active {
+  background: linear-gradient(90deg, rgba(237,92,43,0.22) 0%, rgba(237,92,43,0.06) 100%);
+  color: #fff;
+  border-left: 3px solid var(--orange);
+  box-shadow: inset 0 0 24px rgba(237, 92, 43, 0.08);
+}
+
+/* ── Top header bar ── */
+.header {
+  background: linear-gradient(90deg, #1C2B41 0%, #1a2d44 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
+  border-bottom-width: 2px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Dashboard hero ── */
+.dashboard-hero {
+  background: linear-gradient(135deg, #1C2B41 0%, #1a2d46 50%, #111d2e 100%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14);
+  border-radius: 10px;
+  border-left: 4px solid var(--orange);
+}
+
+/* ── Metric cards — orange top accent + hover lift ── */
+.metric-card {
+  border-top: 3px solid var(--orange);
+  border-radius: 10px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.04),
+    0 8px 22px rgba(28, 43, 65, 0.06);
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 220ms ease;
+}
+.metric-card:hover {
+  transform: translateY(-5px);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.06),
+    0 18px 44px rgba(28, 43, 65, 0.12);
+}
+.metric-card strong {
+  font-size: 30px;
+  color: #0f1e2e;
+  letter-spacing: -0.5px;
+}
+.metric-card span {
+  color: #8496ad;
+}
+
+/* ── Dashboard action links ── */
+.dashboard-actions a {
+  border-radius: 8px;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.dashboard-actions a:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(28, 43, 65, 0.12);
+  color: var(--orange);
+}
+
+/* ── Dashboard panels ── */
+.dashboard-panel {
+  border-radius: 10px;
+  transition: box-shadow 220ms ease;
+}
+.dashboard-panel:hover {
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.04),
+    0 18px 44px rgba(28, 43, 65, 0.1);
+}
+
+.panel-heading h2 {
+  font-size: 20px;
+}
+
+.panel-link {
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border: 1px solid rgba(237, 92, 43, 0.25);
+  border-radius: 999px;
+  transition: background 200ms ease, color 200ms ease;
+}
+.panel-link:hover {
+  background: rgba(237, 92, 43, 0.08);
+  border-color: var(--orange);
+}
+
+/* ── Responsive tables — row hover tint ── */
+.responsive-table thead tr th {
+  background: linear-gradient(90deg, rgba(237,92,43,0.06), rgba(237,92,43,0.02));
+  color: #64748b;
+}
+.responsive-table tbody tr {
+  transition: background 180ms ease;
+}
+.responsive-table tbody tr:hover td {
+  background: rgba(237, 92, 43, 0.04);
+}
+.responsive-table td {
+  font-size: 13.5px;
+}
+
+/* ── Table-wrap (older tables) ── */
+.table-wrap th {
+  background: linear-gradient(90deg, #1C2B41, #1a2d44);
+}
+.table-wrap tbody tr:hover td {
+  background: rgba(237, 92, 43, 0.04);
+}
+
+/* ── Status badges — semantic colours ── */
+.status-box {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.status-active {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.status-low {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.status-out {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* ── Btn primary — gradient + glow ── */
+.btn-primary {
+  background: linear-gradient(135deg, var(--orange) 0%, #f97316 100%);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(237, 92, 43, 0.22);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #D94A1A 0%, #ea580c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(237, 92, 43, 0.34);
+}
+
+/* ── Btn ghost ── */
+.btn-ghost:hover {
+  border-color: var(--navy);
+  background: rgba(28, 43, 65, 0.06);
+  transform: translateY(-1px);
+}
+
+/* ── Edit/Delete action buttons ── */
+.btn-edit {
+  background: linear-gradient(135deg, #1C2B41 0%, #142031 100%);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(28, 43, 65, 0.16);
+}
+.btn-edit:hover {
+  background: linear-gradient(135deg, #142031 0%, #0e1925 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(28, 43, 65, 0.22);
+}
+.btn-delete {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+.btn-delete:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.28);
+}
+
+/* ── Form inputs ── */
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 4px rgba(237, 92, 43, 0.12), 0 2px 8px rgba(237,92,43,0.06);
+}
+
+.form-card {
+  border-radius: 10px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(28, 43, 65, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* ── Profile summary ── */
+.profile-summary {
+  background: linear-gradient(135deg, #1C2B41 0%, #162336 55%, #111c2b 100%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+}
+
+.profile-avatar {
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(237, 92, 43, 0.3);
+  background: linear-gradient(135deg, var(--orange), #f97316) !important;
+}
+
+.profile-section {
+  border-radius: 10px;
+  transition: box-shadow 220ms ease;
+}
+.profile-section:hover {
+  box-shadow: 0 8px 28px rgba(28, 43, 65, 0.08);
+}
+
+/* ── Locked grid items ── */
+.locked-grid div {
+  border-radius: 8px;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.locked-grid div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(28, 43, 65, 0.1);
+}
+
+/* ── Collection items ── */
+.collection-item {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  border-radius: 10px;
+}
+.collection-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(28, 43, 65, 0.1);
+  border-color: rgba(237, 92, 43, 0.28);
+}
+.collection-meta b {
+  background: linear-gradient(135deg, var(--orange), #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Sales bar ── */
+.sales-bar span {
+  background: linear-gradient(90deg, var(--orange) 0%, #f97316 50%, #fb923c 100%);
+}
+
+/* ── Chart legend swatches ── */
+.chart-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* ── Trader page heading ── */
+.trader-page-heading {
+  border-radius: 10px;
+  border-left: 4px solid var(--orange);
+  box-shadow: 0 4px 16px rgba(28, 43, 65, 0.06);
+}
+.trader-page-heading h1 { letter-spacing: -0.3px; }
+
+/* ── Report filter bar ── */
+.report-filter-bar {
+  border-top: 3px solid var(--orange);
+  border-radius: 10px;
+}
+.report-filter-bar .field input:focus,
+.report-filter-bar .field select:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(237, 92, 43, 0.12);
+}
+
+/* ── Slot chip list ── */
+.slot-chip-list a {
+  border-radius: 8px;
+  transition: all 200ms ease;
+}
+.slot-chip-list a:hover,
+.slot-chip-list a.active {
+  background: rgba(237, 92, 43, 0.08);
+  border-color: var(--orange);
+  color: var(--orange);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(237, 92, 43, 0.14);
+}
+
+/* ── Empty state ── */
+.empty-state {
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fafbfc 0%, var(--light) 100%);
+}
+
+/* ── Flash toast (trader portal) ── */
+.flash-toast {
+  border-radius: 12px;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.06),
+    0 14px 36px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Auth pages (trader) ── */
+.auth-login-copy {
+  background: linear-gradient(135deg, #1C2B41 0%, #162336 55%, #111c2b 100%);
+  border-radius: 12px;
+}
+
+.auth-login-card {
+  border-radius: 12px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.04),
+    0 16px 44px rgba(28, 43, 65, 0.1);
+}
+
+.trader-auth-page .btn-primary {
+  background: linear-gradient(135deg, var(--orange), #f97316);
+  box-shadow: 0 8px 22px rgba(237, 92, 43, 0.24);
+}
+.trader-auth-page .btn-primary:hover {
+  background: linear-gradient(135deg, #D94A1A, #ea580c);
+  box-shadow: 0 12px 30px rgba(237, 92, 43, 0.34);
+  transform: translateY(-2px);
+}
+
+/* ── Apply page ── */
+.trader-apply-page .application-card {
+  border-radius: 12px;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.04),
+    0 22px 52px rgba(28, 43, 65, 0.1);
+}
+
+.apply-hero {
+  background: linear-gradient(135deg, #1C2B41 0%, #1a2d46 50%, #111d2e 100%);
+}
+
+/* ── Donut chart hover ── */
+.donut-chart path:hover {
+  opacity: 0.82;
+  transform: scale(1.02);
+  transform-origin: 150px 150px;
+}
+
+/* ── Summary boxes (older layout) ── */
+.summary-boxes .box {
+  border-radius: 10px;
+  border-top: 3px solid var(--orange);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.summary-boxes .box:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 38px rgba(28, 43, 65, 0.12);
+}
+
+/* ── Product thumb ── */
+.product-thumb {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.product-thumb img {
+  transition: transform 300ms ease;
+}
+tr:hover .product-thumb img {
+  transform: scale(1.08);
+}
+
+/* ── Trader portal scrollbar (sidebar) ── */
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(237, 92, 43, 0.5);
+  border-radius: 999px;
+}
+
+/* ── Focus rings ── */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(237, 92, 43, 0.5);
+  outline-offset: 3px;
+}
+
+/* ── Fade-in animation for dashboard ── */
+@keyframes traderfadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.metric-card,
+.dashboard-hero,
+.dashboard-actions,
+.dashboard-panel {
+  animation: traderfadeUp 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.metric-card:nth-child(1) { animation-delay: 60ms; }
+.metric-card:nth-child(2) { animation-delay: 100ms; }
+.metric-card:nth-child(3) { animation-delay: 140ms; }
+.metric-card:nth-child(4) { animation-delay: 180ms; }
+.metric-card:nth-child(5) { animation-delay: 220ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-card,
+  .dashboard-hero,
+  .dashboard-actions,
+  .dashboard-panel {
+    animation: none;
+  }
+}
+
+/* Mobile responsive experience pass */
+@media (max-width: 860px) {
+  body {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+    box-shadow: 0 8px 24px rgba(20, 32, 49, 0.22);
+  }
+
+  .sidebar-brand {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+  }
+
+  .sidebar-brand img {
+    margin: 0;
+  }
+
+  .sidebar h2 {
+    margin: 0;
+    white-space: normal;
+  }
+
+  .shop-switcher {
+    padding: 0.75rem 1rem;
+  }
+
+  .sidebar nav {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.55rem 1rem 0.75rem;
+    scrollbar-width: none;
+  }
+
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar a {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    border-left: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    white-space: nowrap;
+  }
+
+  .sidebar a.active {
+    border-left: 0;
+    background: rgba(237, 92, 43, 0.35);
+  }
+
+  .sidebar-footer-link {
+    display: none;
+  }
+
+  .header,
+  .main-wrap,
+  .main-wrap.form-page,
+  .main-wrap.dashboard-page {
+    margin-left: 0;
+  }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    padding: 0.8rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .main-wrap,
+  .main-wrap.dashboard-page {
+    padding: 1rem;
+  }
+
+  .main-wrap.form-page {
+    padding: 1rem;
+    align-items: stretch;
+  }
+
+  .summary-boxes {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .form-card,
+  .application-card,
+  .auth-login-card {
+    padding: 1.25rem;
+  }
+
+  .dashboard-hero {
+    padding: 1.25rem;
+  }
+
+  .dashboard-hero h1,
+  .apply-hero h1,
+  .auth-login-copy h1 {
+    font-size: 2rem;
+    line-height: 1.08;
+  }
+
+  .dashboard-actions a,
+  .btn,
+  button {
+    min-height: 44px;
+  }
+
+  .table-wrap,
+  .responsive-table,
+  .report-section,
+  .revenue-chart-wrap,
+  .dashboard-panel {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrap table,
+  .responsive-table table,
+  .report-section table {
+    min-width: 680px;
+  }
+
+  .product-table th:first-child,
+  .product-table td:first-child {
+    position: static;
+  }
+
+  .table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .table-actions a,
+  .table-actions button {
+    flex: 1 1 120px;
+    text-align: center;
+  }
+
+  .product-row-card,
+  .collection-card,
+  .finance-line-list article {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar-brand {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .sidebar-brand img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .shop-switcher select,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .dashboard-metrics,
+  .report-metrics,
+  .locked-grid,
+  .label-grid,
+  .profile-summary,
+  .profile-statuses {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-panel,
+  .form-card,
+  .application-card {
+    padding: 1rem;
+  }
+}
+
+/* ── Form validation ── */
+.required-star {
+  color: #dc2626;
+  margin-left: 2px;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.field-optional {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.field-note {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.field.has-error > input,
+.field.has-error > select,
+.field.has-error > textarea {
+  border-color: #dc2626 !important;
+  background-color: #fffafa;
+}
+
+.form-required-legend {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 16px;
 }

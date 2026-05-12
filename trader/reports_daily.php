@@ -1,5 +1,6 @@
 <?php
 require_once 'auth_check.php';
+require_once 'product_helpers.php';
 
 function h(string $value): string
 {
@@ -38,6 +39,8 @@ function slot_label(string $value): string
 
 $selected_date = valid_report_date($_GET['date'] ?? null);
 $selected_slot = normalize_slot_time((string)($_GET['slot'] ?? ''));
+$shop_context = trader_shop_context($conn, $current_trader_id, true);
+$shop_filter_sql = trader_shop_filter_sql($shop_context);
 $allowed_slots = ['10-13', '13-16', '16-19'];
 if ($selected_slot !== '' && !in_array($selected_slot, $allowed_slots, true)) {
     $selected_slot = '';
@@ -63,6 +66,7 @@ $slot_sql = "
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     JOIN COLLECTION_SLOT cs ON cs.SLOT_ID = o.SLOT_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND TRUNC(cs.COLLECTION_DATE) = TO_DATE(:selected_date, 'YYYY-MM-DD')
       {$report_order_status_sql}
     ORDER BY SLOT_ORDER, cs.COLLECTION_TIME
@@ -71,6 +75,7 @@ $slot_sql = "
 $slot_stmt = oci_parse($conn, $slot_sql);
 oci_bind_by_name($slot_stmt, ':trader_id', $current_trader_id);
 oci_bind_by_name($slot_stmt, ':selected_date', $selected_date);
+trader_bind_shop_filter($slot_stmt, $shop_context);
 oci_execute($slot_stmt);
 $available_slots = [];
 while ($row = oci_fetch_assoc($slot_stmt)) {
@@ -98,6 +103,7 @@ $detail_sql = "
     JOIN COLLECTION_SLOT cs ON cs.SLOT_ID = o.SLOT_ID
     LEFT JOIN SYSTEM_USER su ON su.USER_ID = o.CUSTOMER_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND TRUNC(cs.COLLECTION_DATE) = TO_DATE(:selected_date, 'YYYY-MM-DD')
       {$slot_filter_sql}
       {$report_order_status_sql}
@@ -107,6 +113,7 @@ $detail_sql = "
 $detail_stmt = oci_parse($conn, $detail_sql);
 oci_bind_by_name($detail_stmt, ':trader_id', $current_trader_id);
 oci_bind_by_name($detail_stmt, ':selected_date', $selected_date);
+trader_bind_shop_filter($detail_stmt, $shop_context);
 if ($selected_slot !== '') {
     oci_bind_by_name($detail_stmt, ':selected_slot', $selected_slot);
 }
@@ -145,7 +152,8 @@ usort($summary_rows, static function (array $a, array $b): int {
     return [$a_order, $a['PRODUCT_NAME']] <=> [$b_order, $b['PRODUCT_NAME']];
 });
 
-$shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop');
+$shop_name = trader_shop_context_label($shop_context, 'All shops');
+$account_name = trader_account_label($current_trader);
 $total_quantity = array_sum(array_map(static fn($row) => (int)$row['QUANTITY'], $order_items));
 $total_orders = count($orders_seen);
 ?>
@@ -161,7 +169,7 @@ $total_orders = count($orders_seen);
 <div class="sidebar">
   <div class="sidebar-brand">
     <img src="logo1.png" alt="Cleckhuddesfax Online Mart" width="36" height="36">
-    <h2><?= h($shop_name) ?></h2>
+    <h2><?= h($account_name) ?></h2>
     <span class="sidebar-label">Trader Portal</span>
   </div>
   <nav>
@@ -173,6 +181,7 @@ $total_orders = count($orders_seen);
     <a href="reports_monthly_sales.php">Monthly Sales</a>
     <a href="profile.php">Profile</a>
   </nav>
+  <?php trader_render_shop_switcher($shop_context); ?>
   <div class="sidebar-footer-link">
     <a href="logout.php">Sign Out</a>
   </div>
@@ -185,7 +194,7 @@ $total_orders = count($orders_seen);
     <div>
       <span class="apply-eyebrow">Collection Preparation</span>
       <h1><?= h($shop_name) ?></h1>
-      <p>Only orders containing products from your shop are shown. Use this page to prepare goods and print collection labels.</p>
+      <p>Use the shop selector to prepare orders for all shops or one shop at a time.</p>
     </div>
     <div class="dashboard-hero-meta">
       <button type="button" class="btn btn-primary" onclick="window.print()">Print Labels</button>

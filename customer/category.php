@@ -39,52 +39,54 @@ function category_column_exists($conn, string $table, string $column): bool
     return (int)($row['CNT'] ?? 0) > 0;
 }
 
-function trader_card_config(string $business_name): array
+function shop_card_config(string $shop_name): array
 {
-    $name = strtoupper($business_name);
+    $name = strtoupper($shop_name);
 
-    if (str_contains($name, 'BUTCH')) {
-        return ['image' => 'assets/images/butchers.png', 'href' => 'butcher.php'];
+    if (str_contains($name, 'BUTCH') || str_contains($name, 'POULTRY')) {
+        return ['image' => 'assets/images/butchers.png'];
     }
-    if (str_contains($name, 'GREEN')) {
-        return ['image' => 'assets/images/greengrocers.png', 'href' => 'greengrocers.php'];
+    if (str_contains($name, 'GREEN') || str_contains($name, 'VEGETABLE')) {
+        return ['image' => 'assets/images/greengrocers.png'];
     }
-    if (str_contains($name, 'DELICAT')) {
-        return ['image' => 'assets/images/delicatessen.png', 'href' => 'delicatessen.php'];
+    if (str_contains($name, 'DELICAT') || str_contains($name, 'CHEESE') || str_contains($name, 'CHARCUTERIE')) {
+        return ['image' => 'assets/images/delicatessen.png'];
     }
-    if (str_contains($name, 'FISH')) {
-        return ['image' => 'assets/images/fishmongers.png', 'href' => 'fishmongers.php'];
+    if (str_contains($name, 'FISH') || str_contains($name, 'SEAFOOD')) {
+        return ['image' => 'assets/images/fishmongers.png'];
     }
-    if (str_contains($name, 'BAKER')) {
-        return ['image' => 'assets/images/bakery.png', 'href' => 'bakery.php'];
+    if (str_contains($name, 'BAKER') || str_contains($name, 'SWEET')) {
+        return ['image' => 'assets/images/bakery.png'];
     }
 
-    return ['image' => '', 'href' => 'search.php?q=' . urlencode($business_name)];
+    return ['image' => ''];
 }
 
 $shop_image_select = category_column_exists($conn, 'SHOP', 'IMAGE_PATH')
     ? ', s.IMAGE_PATH AS SHOP_IMAGE_PATH'
     : ", NULL AS SHOP_IMAGE_PATH";
 
-$trader_sql = "
-    SELECT t.USER_ID,
+$shop_sql = "
+    SELECT s.SHOP_ID,
+           s.SHOP_NAME,
+           t.USER_ID,
            t.BUSINESS_NAME
            {$shop_image_select}
-    FROM TRADER t
+    FROM SHOP s
+    JOIN TRADER t ON t.USER_ID = s.TRADER_ID
     JOIN SYSTEM_USER su ON su.USER_ID = t.USER_ID
-    LEFT JOIN SHOP s ON s.TRADER_ID = t.USER_ID
     WHERE NVL(UPPER(TRIM(t.STATUS)), 'ACTIVE') IN ('ACTIVE', 'APPROVED')
       AND NVL(UPPER(TRIM(su.STATUS)), 'ACTIVE') IN ('ACTIVE', 'APPROVED')
-    ORDER BY t.USER_ID
+    ORDER BY s.SHOP_NAME
 ";
 
-$traders = [];
-$trader_stmt = oci_parse($conn, $trader_sql);
-if ($trader_stmt && oci_execute($trader_stmt)) {
-    while ($trader = oci_fetch_assoc($trader_stmt)) {
-        $traders[] = $trader;
+$shops = [];
+$shop_stmt = oci_parse($conn, $shop_sql);
+if ($shop_stmt && oci_execute($shop_stmt)) {
+    while ($shop = oci_fetch_assoc($shop_stmt)) {
+        $shops[] = $shop;
     }
-    oci_free_statement($trader_stmt);
+    oci_free_statement($shop_stmt);
 }
 
 include 'header.php';
@@ -100,28 +102,30 @@ include 'header.php';
         </div>
 
         <div class="category-grid">
-            <?php if (empty($traders)): ?>
-                <div class="category-empty">No verified traders are available yet.</div>
+            <?php if (empty($shops)): ?>
+                <div class="category-empty">No verified shops are available yet.</div>
             <?php else: ?>
-                <?php foreach ($traders as $trader): ?>
+                <?php foreach ($shops as $shop): ?>
                     <?php
-                    $business_name = (string)($trader['BUSINESS_NAME'] ?? 'Trader');
-                    $card = trader_card_config($business_name);
-                    $shop_image_path = trim((string)($trader['SHOP_IMAGE_PATH'] ?? ''));
+                    $shop_name = (string)($shop['SHOP_NAME'] ?? 'Shop');
+                    $business_name = (string)($shop['BUSINESS_NAME'] ?? 'Trader');
+                    $card = shop_card_config($shop_name);
+                    $href = 'shop.php?id=' . (int)($shop['SHOP_ID'] ?? 0);
+                    $shop_image_path = trim((string)($shop['SHOP_IMAGE_PATH'] ?? ''));
                     $image_src = $shop_image_path !== '' ? '../' . $shop_image_path : $card['image'];
                     $is_placeholder = $image_src === '';
                     ?>
-                    <a href="<?= h($card['href']) ?>" class="category-card<?= $is_placeholder ? ' trader-placeholder' : '' ?>" style="display: flex; text-decoration: none; cursor: pointer;">
+                    <a href="<?= h($href) ?>" class="category-card<?= $is_placeholder ? ' trader-placeholder' : '' ?>" style="display: flex; text-decoration: none; cursor: pointer;">
                         <div class="category-img-area">
                             <?php if ($is_placeholder): ?>
-                                <div class="category-img-placeholder"><?= h($business_name) ?></div>
+                                <div class="category-img-placeholder"><?= h($shop_name) ?></div>
                             <?php else: ?>
-                                <img src="<?= h($image_src) ?>" alt="<?= h($business_name) ?>" class="<?= $shop_image_path !== '' ? 'category-shop-image' : '' ?>" style="max-height: 100%; object-fit: contain;">
+                                <img src="<?= h($image_src) ?>" alt="<?= h($shop_name) ?>" class="<?= $shop_image_path !== '' ? 'category-shop-image' : '' ?>" style="max-height: 100%; object-fit: contain;">
                             <?php endif; ?>
                         </div>
                         <div class="category-divider"></div>
                         <div class="category-bottom-area">
-                            <h2><?= h($business_name) ?></h2>
+                            <h2><?= h($shop_name) ?></h2>
                         </div>
                     </a>
                 <?php endforeach; ?>

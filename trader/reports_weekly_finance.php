@@ -1,5 +1,6 @@
 <?php
 require_once 'auth_check.php';
+require_once 'product_helpers.php';
 
 function h(string $value): string
 {
@@ -25,6 +26,8 @@ $default_end = date('Y-m-d');
 $default_start = date('Y-m-d', strtotime('-6 days'));
 $start_date = valid_report_date($_GET['start'] ?? null, $default_start);
 $end_date = valid_report_date($_GET['end'] ?? null, $default_end);
+$shop_context = trader_shop_context($conn, $current_trader_id, true);
+$shop_filter_sql = trader_shop_filter_sql($shop_context);
 
 if (strtotime($start_date) > strtotime($end_date)) {
     [$start_date, $end_date] = [$end_date, $start_date];
@@ -43,6 +46,7 @@ $summary_sql = "
     JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND o.ORDER_DATE >= TO_DATE(:start_date, 'YYYY-MM-DD')
       AND o.ORDER_DATE < TO_DATE(:end_date, 'YYYY-MM-DD') + 1
       {$report_order_status_sql}
@@ -54,6 +58,7 @@ $stmt = oci_parse($conn, $summary_sql);
 oci_bind_by_name($stmt, ':trader_id', $current_trader_id);
 oci_bind_by_name($stmt, ':start_date', $start_date);
 oci_bind_by_name($stmt, ':end_date', $end_date);
+trader_bind_shop_filter($stmt, $shop_context);
 oci_execute($stmt);
 
 $summary_rows = [];
@@ -76,6 +81,7 @@ $detail_sql = "
     JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND o.ORDER_DATE >= TO_DATE(:start_date, 'YYYY-MM-DD')
       AND o.ORDER_DATE < TO_DATE(:end_date, 'YYYY-MM-DD') + 1
       {$report_order_status_sql}
@@ -86,6 +92,7 @@ $detail_stmt = oci_parse($conn, $detail_sql);
 oci_bind_by_name($detail_stmt, ':trader_id', $current_trader_id);
 oci_bind_by_name($detail_stmt, ':start_date', $start_date);
 oci_bind_by_name($detail_stmt, ':end_date', $end_date);
+trader_bind_shop_filter($detail_stmt, $shop_context);
 oci_execute($detail_stmt);
 
 $detail_rows = [];
@@ -103,7 +110,8 @@ foreach ($detail_rows as $row) {
     $total_quantity += (int)$row['QUANTITY'];
 }
 
-$shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop');
+$shop_name = trader_shop_context_label($shop_context, 'All shops');
+$account_name = trader_account_label($current_trader);
 ?>
 <!doctype html>
 <html lang="en">
@@ -117,7 +125,7 @@ $shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_
 <div class="sidebar">
   <div class="sidebar-brand">
     <img src="logo1.png" alt="Cleckhuddesfax Online Mart" width="36" height="36">
-    <h2><?= h($shop_name) ?></h2>
+    <h2><?= h($account_name) ?></h2>
     <span class="sidebar-label">Trader Portal</span>
   </div>
   <nav>
@@ -129,6 +137,7 @@ $shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_
     <a href="reports_monthly_sales.php">Monthly Sales</a>
     <a href="profile.php">Profile</a>
   </nav>
+  <?php trader_render_shop_switcher($shop_context); ?>
   <div class="sidebar-footer-link">
     <a href="logout.php">Sign Out</a>
   </div>
@@ -141,7 +150,7 @@ $shop_name = (string)($current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_
     <div>
       <span class="apply-eyebrow">Trader Finance</span>
       <h1><?= h($shop_name) ?></h1>
-      <p>Revenue is calculated from your own order items only, so mixed-shop customer orders never leak another trader's totals.</p>
+      <p>Revenue is calculated from your own shops only. Use the selector to split totals by shop.</p>
     </div>
     <div class="dashboard-hero-meta">
       <a href="reports_daily.php" class="btn btn-primary">Daily Orders</a>

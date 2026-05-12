@@ -5,9 +5,6 @@
  * registration in the session until verify_otp.php confirms it.
  */
 
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 include '../db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -24,19 +21,19 @@ $address = trim($_POST['address'] ?? '');
 
 $errors = [];
 if ($name === '') {
-    $errors[] = 'Full name is required.';
+    $errors['name'] = 'Full name is required.';
 }
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'A valid email address is required.';
+    $errors['email'] = 'Enter a valid email address.';
 }
 if (strlen($password) < 8) {
-    $errors[] = 'Password must be at least 8 characters.';
+    $errors['password'] = 'Password must be at least 8 characters.';
 }
 if ($password !== $confirm_password) {
-    $errors[] = 'Passwords do not match.';
+    $errors['confirm_password'] = 'Passwords do not match.';
 }
 if ($address === '') {
-    $errors[] = 'Home address is required.';
+    $errors['address'] = 'Home address is required.';
 }
 
 if (empty($errors)) {
@@ -45,11 +42,12 @@ if (empty($errors)) {
     if (oci_execute($stmt)) {
         $row = oci_fetch_assoc($stmt);
         if ((int)$row['CNT'] > 0) {
-            $errors[] = 'An account with this email already exists.';
+            $errors['email'] = 'An account already exists with this email address.';
         }
     } else {
         $err = oci_error($stmt);
-        $errors[] = 'DB error: ' . ($err['message'] ?? 'unknown error');
+        error_log('[CUSTOMER REGISTER CHECK] ' . ($err['message'] ?? 'unknown error'));
+        $errors['_general'] = 'Could not check for an existing account. Please try again.';
     }
     oci_free_statement($stmt);
 }
@@ -81,7 +79,7 @@ $headers = "From: $from_email\r\n"
 
 if (!mail($email, $subject, $message, $headers)) {
     $_SESSION['register_errors'] = [
-        'Could not send the OTP email. Please check the XAMPP email setup and try again.',
+        '_general' => 'Could not send the OTP email. Please check the XAMPP email setup and try again.',
     ];
     $_SESSION['register_old'] = [
         'name' => $name,

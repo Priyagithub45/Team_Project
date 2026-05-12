@@ -15,7 +15,7 @@ function money_value($value): string
     return 'GBP ' . number_format((float)$value, 2);
 }
 
-function dashboard_scalar($conn, string $sql, int $trader_id, $default = 0)
+function dashboard_scalar($conn, string $sql, int $trader_id, ?int $selected_shop_id = null, $default = 0)
 {
     $stmt = oci_parse($conn, $sql);
     if (!$stmt) {
@@ -25,6 +25,9 @@ function dashboard_scalar($conn, string $sql, int $trader_id, $default = 0)
     }
 
     oci_bind_by_name($stmt, ':trader_id', $trader_id);
+    if ($selected_shop_id !== null) {
+        oci_bind_by_name($stmt, ':selected_shop_id', $selected_shop_id);
+    }
 
     if (!oci_execute($stmt)) {
         $err = oci_error($stmt);
@@ -39,7 +42,7 @@ function dashboard_scalar($conn, string $sql, int $trader_id, $default = 0)
     return $row ? ($row['DASH_VALUE'] ?? $default) : $default;
 }
 
-function dashboard_rows($conn, string $sql, int $trader_id): array
+function dashboard_rows($conn, string $sql, int $trader_id, ?int $selected_shop_id = null): array
 {
     $stmt = oci_parse($conn, $sql);
     if (!$stmt) {
@@ -49,6 +52,9 @@ function dashboard_rows($conn, string $sql, int $trader_id): array
     }
 
     oci_bind_by_name($stmt, ':trader_id', $trader_id);
+    if ($selected_shop_id !== null) {
+        oci_bind_by_name($stmt, ':selected_shop_id', $selected_shop_id);
+    }
 
     if (!oci_execute($stmt)) {
         $err = oci_error($stmt);
@@ -67,8 +73,11 @@ function dashboard_rows($conn, string $sql, int $trader_id): array
 }
 
 $trader_id = (int)$current_trader_id;
-$current_shop = trader_current_shop($conn, $trader_id);
-$shop_name = (string)($current_shop['SHOP_NAME'] ?? $current_trader['SHOP_NAME'] ?? $current_trader['BUSINESS_NAME'] ?? 'Your Shop');
+$shop_context = trader_shop_context($conn, $trader_id, true);
+$selected_shop_id = $shop_context['selected_shop_id'];
+$shop_filter_sql = trader_shop_filter_sql($shop_context);
+$shop_name = trader_shop_context_label($shop_context, 'All shops');
+$account_name = trader_account_label($current_trader);
 $trader_name = (string)($current_trader['NAME'] ?? 'Trader');
 $trader_status = strtoupper(trim((string)($current_trader['TRADER_STATUS'] ?? 'ACTIVE')));
 if ($trader_status === '') {
@@ -83,26 +92,29 @@ $total_products = (int)dashboard_scalar($conn, "
     FROM PRODUCT p
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       {$active_product_filter}
-", $trader_id);
+", $trader_id, $selected_shop_id);
 
 $low_stock_products = (int)dashboard_scalar($conn, "
     SELECT COUNT(*) AS DASH_VALUE
     FROM PRODUCT p
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       {$active_product_filter}
       AND NVL(p.STOCK_QUANTITY, 0) BETWEEN 1 AND 5
-", $trader_id);
+", $trader_id, $selected_shop_id);
 
 $out_of_stock_products = (int)dashboard_scalar($conn, "
     SELECT COUNT(*) AS DASH_VALUE
     FROM PRODUCT p
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       {$active_product_filter}
       AND NVL(p.STOCK_QUANTITY, 0) <= 0
-", $trader_id);
+", $trader_id, $selected_shop_id);
 
 $upcoming_order_count = (int)dashboard_scalar($conn, "
     SELECT COUNT(DISTINCT o.ORDER_ID) AS DASH_VALUE
@@ -112,9 +124,10 @@ $upcoming_order_count = (int)dashboard_scalar($conn, "
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     JOIN COLLECTION_SLOT cs ON cs.SLOT_ID = o.SLOT_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND TRUNC(cs.COLLECTION_DATE) >= TRUNC(SYSDATE)
       AND UPPER(NVL(o.STATUS, 'PAID')) <> 'CANCELLED'
-", $trader_id);
+", $trader_id, $selected_shop_id);
 
 $week_revenue = dashboard_scalar($conn, "
     SELECT NVL(SUM(oi.QUANTITY * NVL(oi.PRICE, p.PRICE)), 0) AS DASH_VALUE
@@ -123,9 +136,10 @@ $week_revenue = dashboard_scalar($conn, "
     JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND o.ORDER_DATE >= TRUNC(SYSDATE) - 6
       AND UPPER(NVL(o.STATUS, 'PAID')) IN ('PAID', 'PREPARING', 'READY FOR COLLECTION', 'COLLECTED', 'COMPLETED')
-", $trader_id, 0);
+", $trader_id, $selected_shop_id, 0);
 
 $month_quantity_sold = (int)dashboard_scalar($conn, "
     SELECT NVL(SUM(oi.QUANTITY), 0) AS DASH_VALUE
@@ -134,9 +148,10 @@ $month_quantity_sold = (int)dashboard_scalar($conn, "
     JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
       AND TRUNC(o.ORDER_DATE, 'MM') = TRUNC(SYSDATE, 'MM')
       AND UPPER(NVL(o.STATUS, 'PAID')) IN ('PAID', 'PREPARING', 'READY FOR COLLECTION', 'COLLECTED', 'COMPLETED')
-", $trader_id);
+", $trader_id, $selected_shop_id);
 
 $inventory_rows = dashboard_rows($conn, "
     SELECT *
@@ -150,11 +165,12 @@ $inventory_rows = dashboard_rows($conn, "
         JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
         LEFT JOIN CATEGORY c ON c.CATEGORY_ID = p.CATEGORY_ID
         WHERE s.TRADER_ID = :trader_id
+          {$shop_filter_sql}
           {$active_product_filter}
         ORDER BY p.PRODUCT_ID DESC
     )
     WHERE ROWNUM <= 8
-", $trader_id);
+", $trader_id, $selected_shop_id);
 
 $upcoming_rows = dashboard_rows($conn, "
     SELECT *
@@ -172,12 +188,13 @@ $upcoming_rows = dashboard_rows($conn, "
         JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
         JOIN COLLECTION_SLOT cs ON cs.SLOT_ID = o.SLOT_ID
         WHERE s.TRADER_ID = :trader_id
+          {$shop_filter_sql}
           AND TRUNC(cs.COLLECTION_DATE) >= TRUNC(SYSDATE)
           AND UPPER(NVL(o.STATUS, 'PAID')) <> 'CANCELLED'
         ORDER BY cs.COLLECTION_DATE, cs.COLLECTION_TIME, o.ORDER_ID, p.PRODUCT_NAME
     )
     WHERE ROWNUM <= 8
-", $trader_id);
+", $trader_id, $selected_shop_id);
 
 function stock_badge_class(int $stock): string
 {
@@ -206,14 +223,14 @@ function stock_label(int $stock): string
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trader Dashboard &mdash; <?= h($shop_name) ?></title>
+  <title>Trader Dashboard &mdash; <?= h($account_name) ?></title>
   <link rel="stylesheet" href="trader.css">
 </head>
 <body>
 <div class="sidebar">
   <div class="sidebar-brand">
     <img src="logo1.png" alt="Cleckhuddesfax Online Mart" width="36" height="36">
-    <h2><?= h($shop_name) ?></h2>
+    <h2><?= h($account_name) ?></h2>
     <span class="sidebar-label">Trader Portal</span>
   </div>
   <nav>
@@ -225,6 +242,7 @@ function stock_label(int $stock): string
     <a href="reports_monthly_sales.php">Monthly Sales</a>
     <a href="profile.php">Profile</a>
   </nav>
+  <?php trader_render_shop_switcher($shop_context); ?>
   <div class="sidebar-footer-link">
     <a href="logout.php">Sign Out</a>
   </div>
@@ -241,7 +259,7 @@ function stock_label(int $stock): string
     <div>
       <span class="apply-eyebrow">Private Trader Workspace</span>
       <h1><?= h($shop_name) ?></h1>
-      <p>Signed in as <?= h($trader_name) ?>. Every figure below is scoped to your trader account only.</p>
+      <p>Signed in as <?= h($trader_name) ?>. Use the shop selector to view all shops or one shop at a time.</p>
     </div>
     <div class="dashboard-hero-meta">
       <span class="status-box status-active"><?= h($trader_status) ?></span>

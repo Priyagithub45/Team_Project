@@ -89,53 +89,91 @@ function old_value(array $old, string $key): string
             </div>
         <?php endif; ?>
 
-                <form method="post" action="register_process.php" autocomplete="off" class="application-form">
+                <p class="form-required-legend"><span class="required-star" aria-hidden="true">*</span> Required field</p>
+
+                <form method="post" action="register_process.php" autocomplete="off" class="application-form" novalidate>
                     <div class="form-row">
-                        <div class="field">
-                            <label for="owner_name">Owner / Full Name</label>
-                            <input type="text" id="owner_name" name="owner_name" maxlength="100" required value="<?= old_value($old, 'owner_name') ?>">
+                        <div class="field<?= isset($errors['owner_name']) ? ' has-error' : '' ?>">
+                            <label for="owner_name">Owner / Full Name <span class="required-star" aria-hidden="true">*</span></label>
+                            <input type="text" id="owner_name" name="owner_name" maxlength="100" required
+                                   autocomplete="name"
+                                   <?= isset($errors['owner_name']) ? 'aria-invalid="true" aria-describedby="err_owner_name"' : '' ?>
+                                   value="<?= old_value($old, 'owner_name') ?>">
+                            <?php if (isset($errors['owner_name'])): ?>
+                                <span class="field-error" id="err_owner_name" role="alert"><?= h((string)$errors['owner_name']) ?></span>
+                            <?php endif; ?>
                         </div>
-                        <div class="field">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" maxlength="100" required value="<?= old_value($old, 'email') ?>">
+                        <div class="field<?= isset($errors['email']) ? ' has-error' : '' ?>">
+                            <label for="email">Email <span class="required-star" aria-hidden="true">*</span></label>
+                            <input type="email" id="email" name="email" maxlength="100" required
+                                   autocomplete="email"
+                                   <?= isset($errors['email']) ? 'aria-invalid="true" aria-describedby="err_email"' : '' ?>
+                                   value="<?= old_value($old, 'email') ?>">
+                            <?php if (isset($errors['email'])): ?>
+                                <span class="field-error" id="err_email" role="alert"><?= h((string)$errors['email']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field<?= isset($errors['phone']) ? ' has-error' : '' ?>">
+                            <label for="phone">Phone Number <span class="field-optional">(optional)</span></label>
+                            <input type="text" id="phone" name="phone" maxlength="20"
+                                   autocomplete="tel"
+                                   <?= isset($errors['phone']) ? 'aria-invalid="true" aria-describedby="err_phone"' : '' ?>
+                                   value="<?= old_value($old, 'phone') ?>">
+                            <?php if (isset($errors['phone'])): ?>
+                                <span class="field-error" id="err_phone" role="alert"><?= h((string)$errors['phone']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="field<?= isset($errors['license_no']) ? ' has-error' : '' ?>">
+                            <label for="license_no">Trading License Number <span class="required-star" aria-hidden="true">*</span></label>
+                            <input type="text" id="license_no" name="license_no" maxlength="50" required
+                                   <?= isset($errors['license_no']) ? 'aria-invalid="true" aria-describedby="err_license_no"' : '' ?>
+                                   value="<?= old_value($old, 'license_no') ?>">
+                            <?php if (isset($errors['license_no'])): ?>
+                                <span class="field-error" id="err_license_no" role="alert"><?= h((string)$errors['license_no']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field<?= isset($errors['shop_name']) ? ' has-error' : '' ?>">
+                            <label for="shop_name">Proposed Shop Name <span class="required-star" aria-hidden="true">*</span></label>
+                            <input type="text" id="shop_name" name="shop_name" maxlength="100" required
+                                   <?= isset($errors['shop_name']) ? 'aria-invalid="true" aria-describedby="err_shop_name"' : '' ?>
+                                   value="<?= old_value($old, 'shop_name') ?>">
+                            <?php if (isset($errors['shop_name'])): ?>
+                                <span class="field-error" id="err_shop_name" role="alert"><?= h((string)$errors['shop_name']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field<?= isset($errors['address']) ? ' has-error' : '' ?>">
+                            <label for="address">Business Address <span class="required-star" aria-hidden="true">*</span></label>
+                            <textarea id="address" name="address" maxlength="200" required
+                                      <?= isset($errors['address']) ? 'aria-invalid="true" aria-describedby="err_address"' : '' ?>><?= old_value($old, 'address') ?></textarea>
+                            <?php if (isset($errors['address'])): ?>
+                                <span class="field-error" id="err_address" role="alert"><?= h((string)$errors['address']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field<?= isset($errors['business_description']) ? ' has-error' : '' ?>">
+                            <label for="business_description">Business Description <span class="required-star" aria-hidden="true">*</span></label>
+                            <textarea id="business_description" name="business_description" maxlength="500" required
+                                      <?= isset($errors['business_description']) ? 'aria-invalid="true" aria-describedby="err_business_description"' : '' ?>><?= old_value($old, 'business_description') ?></textarea>
+                            <?php if (isset($errors['business_description'])): ?>
+                                <span class="field-error" id="err_business_description" role="alert"><?= h((string)$errors['business_description']) ?></span>
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="field">
-                            <label for="phone">Phone Number</label>
-                            <input type="text" id="phone" name="phone" maxlength="20" value="<?= old_value($old, 'phone') ?>">
-                        </div>
-                        <div class="field">
-                            <label for="license_no">Trading License Number</label>
-                            <input type="text" id="license_no" name="license_no" maxlength="50" required value="<?= old_value($old, 'license_no') ?>">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="field">
-                            <label for="shop_name">Proposed Shop Name</label>
-                            <input type="text" id="shop_name" name="shop_name" maxlength="100" required value="<?= old_value($old, 'shop_name') ?>">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="field">
-                            <label for="address">Business Address</label>
-                            <textarea id="address" name="address" maxlength="200" required><?= old_value($old, 'address') ?></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="field">
-                            <label for="business_description">Business Description</label>
-                            <textarea id="business_description" name="business_description" maxlength="500" required><?= old_value($old, 'business_description') ?></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="field">
-                            <label for="notes">Message for the Admin Team</label>
+                            <label for="notes">Message for the Admin Team <span class="field-optional">(optional)</span></label>
                             <textarea id="notes" name="notes" maxlength="500"><?= old_value($old, 'notes') ?></textarea>
                         </div>
                     </div>

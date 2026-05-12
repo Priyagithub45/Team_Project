@@ -167,7 +167,7 @@ include 'header.php';
                 <p>
                     <strong>Method:</strong> <?php echo htmlspecialchars($payment_method); ?><br>
                     <strong>Status:</strong> <?php echo htmlspecialchars($payment_status); ?><br>
-                    <strong>Paid:</strong> &pound;<?php echo number_format($payment_amount, 2); ?><br>
+                    <strong>Amount:</strong> GBP <?php echo number_format($payment_amount, 2); ?><br>
                     <strong>Payment Date:</strong> <?php echo htmlspecialchars($payment_date); ?>
                 </p>
             </div>
@@ -196,8 +196,8 @@ include 'header.php';
                                         <span class="text-italic"><?php echo htmlspecialchars($item['PRODUCT_NAME']); ?></span>
                                     </td>
                                     <td><?php echo (int)$item['QUANTITY']; ?></td>
-                                    <td>&pound;<?php echo number_format((float)$item['PRICE'], 2); ?></td>
-                                    <td><strong>&pound;<?php echo number_format((float)$item['LINE_TOTAL'], 2); ?></strong></td>
+                                    <td>GBP <?php echo number_format((float)$item['PRICE'], 2); ?></td>
+                                    <td><strong>GBP <?php echo number_format((float)$item['LINE_TOTAL'], 2); ?></strong></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
@@ -208,19 +208,19 @@ include 'header.php';
             <div class="invoice-totals">
                 <div class="invoice-total-row">
                     <span>Item Subtotal:</span>
-                    <span>&pound;<?php echo number_format($item_subtotal, 2); ?></span>
+                    <span>GBP <?php echo number_format($item_subtotal, 2); ?></span>
                 </div>
                 <div class="invoice-total-row">
                     <span>Service Fee:</span>
-                    <span>&pound;0.00</span>
+                    <span>GBP 0.00</span>
                 </div>
                 <div class="invoice-total-row">
                     <span>Tax (0%):</span>
-                    <span>&pound;0.00</span>
+                    <span>GBP 0.00</span>
                 </div>
                 <div class="invoice-total-row grand-total-row">
                     <span>TOTAL PAID:</span>
-                    <span>&pound;<?php echo number_format($invoice_total, 2); ?></span>
+                    <span>GBP <?php echo number_format($invoice_total, 2); ?></span>
                 </div>
             </div>
 

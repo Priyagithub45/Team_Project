@@ -65,6 +65,7 @@ function save_shop_image_upload(array $file, int $shop_id): array
 
     $upload_dir = dirname(__DIR__) . '/uploads/shops';
     if (!is_dir($upload_dir) && !mkdir($upload_dir, 0755, true)) {
+        error_log('[IMAGE UPLOAD] Could not create shop upload directory: ' . $upload_dir);
         return ['ok' => false, 'error' => 'Could not create shop image folder.'];
     }
 
@@ -73,6 +74,7 @@ function save_shop_image_upload(array $file, int $shop_id): array
     $target_path = dirname(__DIR__) . '/' . $relative_path;
 
     if (!move_uploaded_file($tmp_name, $target_path)) {
+        error_log('[IMAGE UPLOAD] move_uploaded_file failed: shop_id=' . $shop_id . ', target=' . $target_path);
         return ['ok' => false, 'error' => 'Could not save shop image.'];
     }
 
@@ -98,11 +100,12 @@ $data = [
 ];
 
 $errors = [];
-trader_current_shop($conn, $current_trader_id);
-$current_profile = trader_fetch_profile($conn, $current_trader_id);
+$shop_context = trader_shop_context($conn, $current_trader_id, false);
+$selected_shop_id = $shop_context['selected_shop_id'];
+$current_profile = trader_fetch_profile($conn, $current_trader_id, $selected_shop_id);
 
 if (!$current_profile || empty($current_profile['SHOP_ID'])) {
-    $errors[] = 'No shop is linked to this trader account. Please ask admin to create your shop before editing profile details.';
+    $errors['_general'] = 'Please select one of your shops before editing profile details.';
 }
 
 $shop_image_upload = ['ok' => true, 'path' => null];
@@ -112,47 +115,47 @@ if (isset($_FILES['shop_image']) && ($_FILES['shop_image']['error'] ?? UPLOAD_ER
     } elseif ($current_profile && !empty($current_profile['SHOP_ID'])) {
         $shop_image_upload = save_shop_image_upload($_FILES['shop_image'], (int)$current_profile['SHOP_ID']);
         if (!$shop_image_upload['ok']) {
-            $errors[] = $shop_image_upload['error'];
+            $errors['shop_image'] = $shop_image_upload['error'];
         }
     }
 }
 
 if ($data['name'] === '') {
-    $errors[] = 'Owner/full name is required.';
+    $errors['name'] = 'Owner/full name is required.';
 } elseif (strlen($data['name']) > 100) {
-    $errors[] = 'Owner/full name must be 100 characters or fewer.';
+    $errors['name'] = 'Owner/full name must be 100 characters or fewer.';
 }
 
 if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'A valid email address is required.';
+    $errors['email'] = 'Enter a valid email address.';
 } elseif (strlen($data['email']) > 100) {
-    $errors[] = 'Email must be 100 characters or fewer.';
+    $errors['email'] = 'Email must be 100 characters or fewer.';
 }
 
 if (strlen($data['phone']) > 20) {
-    $errors[] = 'Phone number must be 20 characters or fewer.';
+    $errors['phone'] = 'Phone number must be 20 characters or fewer.';
 }
 
 if (strlen($data['address']) > 200) {
-    $errors[] = 'Address must be 200 characters or fewer.';
+    $errors['address'] = 'Address must be 200 characters or fewer.';
 }
 
 if ($data['shop_name'] === '') {
-    $errors[] = 'Shop name is required.';
+    $errors['shop_name'] = 'Shop name is required.';
 } elseif (strlen($data['shop_name']) > 100) {
-    $errors[] = 'Shop name must be 100 characters or fewer.';
+    $errors['shop_name'] = 'Shop name must be 100 characters or fewer.';
 }
 
 if (strlen($data['shop_location']) > 100) {
-    $errors[] = 'Shop location must be 100 characters or fewer.';
+    $errors['shop_location'] = 'Shop location must be 100 characters or fewer.';
 }
 
 if (strlen($data['shop_contact']) > 20) {
-    $errors[] = 'Shop contact number must be 20 characters or fewer.';
+    $errors['shop_contact'] = 'Shop contact number must be 20 characters or fewer.';
 }
 
 if (strlen($data['shop_description']) > 500) {
-    $errors[] = 'Shop description must be 500 characters or fewer.';
+    $errors['shop_description'] = 'Shop description must be 500 characters or fewer.';
 }
 
 if (empty($errors)) {
@@ -163,23 +166,23 @@ if (empty($errors)) {
     );
 
     if ($email_count === null) {
-        $errors[] = 'Could not check email uniqueness. Please try again.';
+        $errors['email'] = 'Could not check email uniqueness. Please try again.';
     } elseif ($email_count > 0) {
-        $errors[] = 'Another account already uses this email address.';
+        $errors['email'] = 'Another account already uses this email address.';
     }
 }
 
 if (empty($errors)) {
     $shop_count = profile_count_query(
         $conn,
-        'SELECT COUNT(*) AS CNT FROM SHOP WHERE UPPER(TRIM(SHOP_NAME)) = UPPER(TRIM(:shop_name)) AND TRADER_ID <> :trader_id',
-        [':shop_name' => $data['shop_name'], ':trader_id' => $current_trader_id]
+        'SELECT COUNT(*) AS CNT FROM SHOP WHERE UPPER(TRIM(SHOP_NAME)) = UPPER(TRIM(:shop_name)) AND SHOP_ID <> :shop_id',
+        [':shop_name' => $data['shop_name'], ':shop_id' => $selected_shop_id]
     );
 
     if ($shop_count === null) {
-        $errors[] = 'Could not check shop name uniqueness. Please try again.';
+        $errors['shop_name'] = 'Could not check shop name uniqueness. Please try again.';
     } elseif ($shop_count > 0) {
-        $errors[] = 'Another trader already uses this shop name.';
+        $errors['shop_name'] = 'Another trader already uses this shop name.';
     }
 }
 
@@ -238,39 +241,6 @@ if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
 }
 oci_free_statement($stmt);
 
-$stmt = oci_parse(
-    $conn,
-    'UPDATE TRADER
-     SET BUSINESS_NAME = :business_name
-     WHERE USER_ID = :user_id'
-);
-
-if (!$stmt) {
-    $err = oci_error($conn);
-    error_log('[TRADER SAVE PROFILE TRADER PARSE] ' . ($err['message'] ?? 'unknown error'));
-    oci_rollback($conn);
-    cleanup_uploaded_shop_image($shop_image_upload);
-    trader_profile_errors_set(['Could not update trader details. Please try again.']);
-    trader_profile_old_set($data);
-    header('Location: profile.php');
-    exit;
-}
-
-oci_bind_by_name($stmt, ':business_name', $shop_name);
-oci_bind_by_name($stmt, ':user_id', $current_trader_id);
-
-if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
-    $err = oci_error($stmt);
-    error_log('[TRADER SAVE PROFILE TRADER] ' . ($err['message'] ?? 'unknown error'));
-    oci_rollback($conn);
-    cleanup_uploaded_shop_image($shop_image_upload);
-    trader_profile_errors_set(['Could not update trader details. Please try again.']);
-    trader_profile_old_set($data);
-    header('Location: profile.php');
-    exit;
-}
-oci_free_statement($stmt);
-
 $shop_set = [
     'SHOP_NAME = :shop_name',
     'LOCATION = :shop_location',
@@ -290,7 +260,8 @@ $stmt = oci_parse(
     $conn,
     'UPDATE SHOP
      SET ' . implode(",\n         ", $shop_set) . '
-     WHERE TRADER_ID = :trader_id'
+     WHERE TRADER_ID = :trader_id
+       AND SHOP_ID = :shop_id'
 );
 
 if (!$stmt) {
@@ -314,6 +285,7 @@ if (!empty($shop_image_upload['path'])) {
     oci_bind_by_name($stmt, ':shop_image_path', $shop_image_path);
 }
 oci_bind_by_name($stmt, ':trader_id', $current_trader_id);
+oci_bind_by_name($stmt, ':shop_id', $selected_shop_id);
 
 if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
     $err = oci_error($stmt);

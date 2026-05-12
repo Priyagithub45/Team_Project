@@ -29,9 +29,24 @@ $slot_id = (string)(int)$_SESSION['selected_slot_id'];
 
 if ($is_paypal_return) {
     $method_id = !empty($_SESSION['paypal_method_id']) ? (string)(int)$_SESSION['paypal_method_id'] : null;
+    $payment_status = 'Paid';
 } else {
-    $method_id_raw = filter_input(INPUT_POST, 'method_id', FILTER_VALIDATE_INT);
-    $method_id = ($method_id_raw && $method_id_raw > 0) ? (string)(int)$method_id_raw : null;
+    $payment_choice = strtolower(trim((string)($_POST['payment_choice'] ?? '')));
+
+    if ($payment_choice === 'paypal') {
+        header('Location: paypal_start.php');
+        exit;
+    }
+
+    if ($payment_choice !== 'cash') {
+        $_SESSION['order_error'] = 'Please choose Cash or PayPal as your payment method.';
+        $mode = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') ? 'buy_now' : 'cart';
+        header('Location: checkout.php?mode=' . $mode);
+        exit;
+    }
+
+    $method_id = null;
+    $payment_status = 'Pending';
 }
 
 $is_buy_now = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') && !empty($_SESSION['buy_now_item']);
@@ -223,6 +238,20 @@ if ($method_id !== null) {
     }
 }
 
+if (!$is_paypal_return) {
+    $stmt = oci_parse($conn, "SELECT METHOD_ID
+                              FROM PAYMENT_METHOD
+                              WHERE UPPER(TRIM(METHOD_NAME)) = 'CASH'
+                                AND ROWNUM = 1");
+    execute_or_fail($conn, $stmt, 'Could not verify the cash payment method.');
+    $cash_method = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    if ($cash_method) {
+        $method_id = (string)(int)$cash_method['METHOD_ID'];
+    }
+}
+
 // Create the order and return its generated id from Oracle.
 $order_id = null;
 $stmt = oci_parse($conn, "INSERT INTO ORDERS (ORDER_ID, CUSTOMER_ID, SLOT_ID, TOTAL_AMOUNT, ORDER_DATE, STATUS)
@@ -270,15 +299,17 @@ foreach ($cart_items as $item) {
 
 if ($method_id !== null) {
     $stmt = oci_parse($conn, "INSERT INTO PAYMENT (PAYMENT_ID, AMOUNT, PAYMENT_STATUS, ORDER_ID, METHOD_ID, USER_ID)
-                              VALUES (PAYMENT_SEQ.NEXTVAL, :p_amount, 'Paid', :p_oid, :p_mid, :p_uid)");
+                              VALUES (PAYMENT_SEQ.NEXTVAL, :p_amount, :p_status, :p_oid, :p_mid, :p_uid)");
     oci_bind_by_name($stmt, ':p_amount', $total_amount);
+    oci_bind_by_name($stmt, ':p_status', $payment_status);
     oci_bind_by_name($stmt, ':p_oid', $order_id);
     oci_bind_by_name($stmt, ':p_mid', $method_id);
     oci_bind_by_name($stmt, ':p_uid', $user_id);
 } else {
     $stmt = oci_parse($conn, "INSERT INTO PAYMENT (PAYMENT_ID, AMOUNT, PAYMENT_STATUS, ORDER_ID, USER_ID)
-                              VALUES (PAYMENT_SEQ.NEXTVAL, :p_amount, 'Paid', :p_oid, :p_uid)");
+                              VALUES (PAYMENT_SEQ.NEXTVAL, :p_amount, :p_status, :p_oid, :p_uid)");
     oci_bind_by_name($stmt, ':p_amount', $total_amount);
+    oci_bind_by_name($stmt, ':p_status', $payment_status);
     oci_bind_by_name($stmt, ':p_oid', $order_id);
     oci_bind_by_name($stmt, ':p_uid', $user_id);
 }

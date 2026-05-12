@@ -70,6 +70,167 @@ function trader_current_shop($conn, int $trader_id): ?array
     return trader_fetch_current_shop($conn, $trader_id);
 }
 
+function trader_owned_shops($conn, int $trader_id): array
+{
+    $stmt = oci_parse(
+        $conn,
+        "SELECT SHOP_ID, SHOP_NAME
+         FROM SHOP
+         WHERE TRADER_ID = :trader_id
+         ORDER BY SHOP_NAME"
+    );
+
+    if (!$stmt) {
+        return [];
+    }
+
+    oci_bind_by_name($stmt, ':trader_id', $trader_id);
+    if (!oci_execute($stmt)) {
+        oci_free_statement($stmt);
+        return [];
+    }
+
+    $shops = [];
+    while ($shop = oci_fetch_assoc($stmt)) {
+        $shops[] = $shop;
+    }
+    oci_free_statement($stmt);
+
+    return $shops;
+}
+
+function trader_fetch_owned_shop($conn, int $shop_id, int $trader_id): ?array
+{
+    $stmt = oci_parse(
+        $conn,
+        "SELECT SHOP_ID, SHOP_NAME
+         FROM SHOP
+         WHERE SHOP_ID = :shop_id
+           AND TRADER_ID = :trader_id"
+    );
+
+    if (!$stmt) {
+        return null;
+    }
+
+    oci_bind_by_name($stmt, ':shop_id', $shop_id);
+    oci_bind_by_name($stmt, ':trader_id', $trader_id);
+
+    if (!oci_execute($stmt)) {
+        oci_free_statement($stmt);
+        return null;
+    }
+
+    $shop = oci_fetch_assoc($stmt) ?: null;
+    oci_free_statement($stmt);
+
+    return $shop;
+}
+
+function trader_shop_context($conn, int $trader_id, bool $allow_all = true): array
+{
+    trader_current_shop($conn, $trader_id);
+    $shops = trader_owned_shops($conn, $trader_id);
+    $owned_by_id = [];
+
+    foreach ($shops as $shop) {
+        $owned_by_id[(int)$shop['SHOP_ID']] = $shop;
+    }
+
+    $requested = $_POST['shop_id'] ?? $_GET['shop_id'] ?? null;
+    if ($requested !== null) {
+        $requested = trim((string)$requested);
+
+        if ($allow_all && $requested === 'all') {
+            unset($_SESSION['trader_selected_shop_id']);
+        } else {
+            $requested_id = filter_var($requested, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($requested_id !== false && isset($owned_by_id[(int)$requested_id])) {
+                $_SESSION['trader_selected_shop_id'] = (int)$requested_id;
+            }
+        }
+    }
+
+    $selected_id = $_SESSION['trader_selected_shop_id'] ?? null;
+    if ($selected_id !== null && !isset($owned_by_id[(int)$selected_id])) {
+        unset($_SESSION['trader_selected_shop_id']);
+        $selected_id = null;
+    }
+
+    if (!$allow_all && $selected_id === null && !empty($shops)) {
+        $selected_id = (int)$shops[0]['SHOP_ID'];
+        $_SESSION['trader_selected_shop_id'] = $selected_id;
+    }
+
+    $selected_shop = $selected_id !== null ? ($owned_by_id[(int)$selected_id] ?? null) : null;
+
+    return [
+        'allow_all' => $allow_all,
+        'shops' => $shops,
+        'selected_shop_id' => $selected_shop ? (int)$selected_shop['SHOP_ID'] : null,
+        'selected_shop' => $selected_shop,
+    ];
+}
+
+function trader_shop_filter_sql(array $shop_context, string $shop_alias = 's'): string
+{
+    return $shop_context['selected_shop_id'] !== null ? "AND {$shop_alias}.SHOP_ID = :selected_shop_id" : '';
+}
+
+function trader_bind_shop_filter($stmt, array $shop_context): void
+{
+    if ($shop_context['selected_shop_id'] !== null) {
+        $selected_shop_id = (int)$shop_context['selected_shop_id'];
+        oci_bind_by_name($stmt, ':selected_shop_id', $selected_shop_id);
+    }
+}
+
+function trader_shop_context_label(array $shop_context, string $fallback = 'All shops'): string
+{
+    if (!empty($shop_context['selected_shop'])) {
+        return (string)$shop_context['selected_shop']['SHOP_NAME'];
+    }
+
+    return $fallback;
+}
+
+function trader_account_label(array $current_trader): string
+{
+    $business_name = trim((string)($current_trader['BUSINESS_NAME'] ?? ''));
+    if ($business_name !== '') {
+        return $business_name;
+    }
+
+    $name = trim((string)($current_trader['NAME'] ?? ''));
+    return $name !== '' ? $name : 'Trader Account';
+}
+
+function trader_render_shop_switcher(array $shop_context): void
+{
+    $action = basename((string)($_SERVER['SCRIPT_NAME'] ?? 'dashboard.php'));
+    $current_value = $shop_context['selected_shop_id'] !== null ? (string)$shop_context['selected_shop_id'] : 'all';
+    ?>
+    <form method="get" action="<?= htmlspecialchars($action, ENT_QUOTES, 'UTF-8') ?>" class="shop-switcher">
+        <?php foreach ($_GET as $key => $value): ?>
+            <?php if ($key === 'shop_id' || is_array($value)) { continue; } ?>
+            <input type="hidden" name="<?= htmlspecialchars((string)$key, ENT_QUOTES, 'UTF-8') ?>" value="<?= htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8') ?>">
+        <?php endforeach; ?>
+        <label for="trader_shop_switcher">Shop</label>
+        <select id="trader_shop_switcher" name="shop_id" onchange="this.form.submit()">
+            <?php if ($shop_context['allow_all']): ?>
+                <option value="all"<?= $current_value === 'all' ? ' selected' : '' ?>>All shops</option>
+            <?php endif; ?>
+            <?php foreach ($shop_context['shops'] as $shop): ?>
+                <?php $shop_id = (string)$shop['SHOP_ID']; ?>
+                <option value="<?= htmlspecialchars($shop_id, ENT_QUOTES, 'UTF-8') ?>"<?= $current_value === $shop_id ? ' selected' : '' ?>>
+                    <?= htmlspecialchars((string)$shop['SHOP_NAME'], ENT_QUOTES, 'UTF-8') ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </form>
+    <?php
+}
+
 function trader_fetch_current_shop($conn, int $trader_id): ?array
 {
     $stmt = oci_parse(
@@ -322,28 +483,28 @@ function trader_validate_product_input(): array
     $errors = [];
 
     if ($data['product_name'] === '') {
-        $errors[] = 'Product name is required.';
+        $errors['product_name'] = 'Product name is required.';
     } elseif (strlen($data['product_name']) > 100) {
-        $errors[] = 'Product name must be 100 characters or fewer.';
+        $errors['product_name'] = 'Product name must be 100 characters or fewer.';
     }
 
     if (strlen($data['description']) > 200) {
-        $errors[] = 'Description must be 200 characters or fewer.';
+        $errors['description'] = 'Description must be 200 characters or fewer.';
     }
 
     $price = filter_var($data['price'], FILTER_VALIDATE_FLOAT);
     if ($price === false || $price <= 0) {
-        $errors[] = 'Price must be greater than 0.';
+        $errors['price'] = 'Price must be greater than 0.';
     }
 
     $stock = filter_var($data['stock_quantity'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
     if ($stock === false) {
-        $errors[] = 'Stock quantity cannot be negative.';
+        $errors['stock_quantity'] = 'Stock quantity cannot be negative.';
     }
 
     $category_id = filter_var($data['category_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if ($category_id === false) {
-        $errors[] = 'Please select a valid category.';
+        $errors['category_id'] = 'Please select a valid category.';
     }
 
     $quantity_per_item = trader_optional_number($data['quantity_per_item']);
@@ -351,28 +512,28 @@ function trader_validate_product_input(): array
     $max_order = trader_optional_number($data['max_order']);
 
     if ($data['quantity_per_item'] !== '' && $quantity_per_item === null) {
-        $errors[] = 'Quantity per item must be 0 or greater.';
+        $errors['quantity_per_item'] = 'Quantity per item must be 0 or greater.';
     }
     if ($data['min_order'] !== '' && $min_order === null) {
-        $errors[] = 'Minimum order must be 0 or greater.';
+        $errors['min_order'] = 'Minimum order must be 0 or greater.';
     }
     if ($data['max_order'] !== '' && $max_order === null) {
-        $errors[] = 'Maximum order must be 0 or greater.';
+        $errors['max_order'] = 'Maximum order must be 0 or greater.';
     }
     if ($min_order !== null && $max_order !== null && $min_order > $max_order) {
-        $errors[] = 'Minimum order cannot be greater than maximum order.';
+        $errors['min_order'] = 'Minimum order cannot be greater than maximum order.';
     }
 
     if ($data['expiry_date'] !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['expiry_date'])) {
-        $errors[] = 'Expiry date must use YYYY-MM-DD format.';
+        $errors['expiry_date'] = 'Expiry date must use YYYY-MM-DD format.';
     }
 
     if (strlen($data['allergy_info']) > 200) {
-        $errors[] = 'Allergy information must be 200 characters or fewer.';
+        $errors['allergy_info'] = 'Allergy information must be 200 characters or fewer.';
     }
 
     if (!in_array($data['status'], ['ACTIVE', 'INACTIVE', 'DISCONTINUED'], true)) {
-        $errors[] = 'Please select a valid product status.';
+        $errors['status'] = 'Please select a valid product status.';
     }
 
     $data['price'] = $price === false ? null : round((float)$price, 2);
@@ -400,7 +561,9 @@ function trader_fetch_owned_product($conn, int $product_id, int $trader_id): ?ar
                p.QUANTITY_PER_ITEM,
                p.MIN_ORDER,
                p.MAX_ORDER,
-               p.ALLERGY_INFO
+               p.ALLERGY_INFO,
+               p.SHOP_ID,
+               s.SHOP_NAME
                {$status_select}
                {$image_select}
         FROM PRODUCT p

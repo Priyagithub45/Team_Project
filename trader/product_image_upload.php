@@ -29,6 +29,7 @@ function save_product_image_upload(array $file, int $product_id): array
 
     $upload_dir = dirname(__DIR__) . '/uploads/products';
     if (!is_dir($upload_dir) && !mkdir($upload_dir, 0755, true)) {
+        error_log('[IMAGE UPLOAD] Could not create product upload directory: ' . $upload_dir);
         return ['ok' => false, 'error' => 'Could not create product image folder.'];
     }
 
@@ -37,6 +38,7 @@ function save_product_image_upload(array $file, int $product_id): array
     $target_path = dirname(__DIR__) . '/' . $relative_path;
 
     if (!move_uploaded_file($tmp_name, $target_path)) {
+        error_log('[IMAGE UPLOAD] move_uploaded_file failed: product_id=' . $product_id . ', target=' . $target_path);
         return ['ok' => false, 'error' => 'Could not save product image.'];
     }
 
