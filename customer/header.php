@@ -86,18 +86,9 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
         </div>
     </header>
 
-    <?php if ($flash_success || $flash_error): ?>
-        <div class="container" style="margin-top:16px;">
-            <?php if ($flash_success): ?>
-                <div style="background:#efe; border:1px solid #0a0; padding:12px; border-radius:6px; color:#060;">
-                    <?php echo htmlspecialchars($flash_success); ?>
-                </div>
-            <?php endif; ?>
-
-            <?php if ($flash_error): ?>
-                <div style="background:#fee; border:1px solid #c00; padding:12px; border-radius:6px; color:#900;">
-                    <?php echo htmlspecialchars($flash_error); ?>
-                </div>
-            <?php endif; ?>
-        </div>
+    <?php if ($flash_success): ?>
+        <div class="cfo-flash cfo-flash-success" style="display:none"><?php echo htmlspecialchars($flash_success); ?></div>
+    <?php endif; ?>
+    <?php if ($flash_error): ?>
+        <div class="cfo-flash cfo-flash-error" style="display:none"><?php echo htmlspecialchars($flash_error); ?></div>
     <?php endif; ?>

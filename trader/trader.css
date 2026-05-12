@@ -198,27 +198,95 @@ body {
 }
 
 .alert {
-  padding: 12px 14px;
-  border-radius: 6px;
-  margin-bottom: 18px;
+  display: none;
+}
+
+/* ── Toast notifications ── */
+.flash-toast-container {
+  position: fixed;
+  top: 22px;
+  right: 26px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.flash-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 270px;
+  max-width: 370px;
+  background: #fff;
+  padding: 14px 14px 18px 16px;
+  border-radius: 10px;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.07);
+  position: relative;
+  overflow: hidden;
+  animation: flashToastIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.flash-toast.flash-toast-hiding {
+  animation: flashToastOut 0.28s ease forwards;
+}
+
+.flash-toast-success { border-left: 4px solid #2e7d32; }
+.flash-toast-error   { border-left: 4px solid #c62828; }
+
+.flash-toast-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1.3;
+  font-weight: 700;
+}
+.flash-toast-success .flash-toast-icon { color: #2e7d32; }
+.flash-toast-error   .flash-toast-icon { color: #c62828; }
+
+.flash-toast-body {
+  flex: 1;
+  font-size: 13.5px;
   line-height: 1.45;
+  color: #1C2B41;
+  font-weight: 500;
 }
 
-.alert ul {
-  margin: 0;
-  padding-left: 20px;
+.flash-toast-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  color: #aaa;
+  font-size: 17px;
+  line-height: 1.3;
+  flex-shrink: 0;
+  transition: color 0.15s;
 }
+.flash-toast-close:hover { color: #444; }
 
-.alert-success {
-  background: #e8f5e9;
-  border-left: 4px solid #2e7d32;
-  color: #1b5e20;
+.flash-toast-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  border-radius: 0 2px 0 0;
 }
+.flash-toast-success .flash-toast-bar { background: #2e7d32; }
+.flash-toast-error   .flash-toast-bar { background: #c62828; }
 
-.alert-error {
-  background: #fdecea;
-  border-left: 4px solid #c62828;
-  color: #8a1c1c;
+@keyframes flashToastIn {
+  from { opacity: 0; transform: translateX(50px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0)   scale(1);    }
+}
+@keyframes flashToastOut {
+  from { opacity: 1; transform: translateX(0)   scale(1);    max-height: 200px; }
+  to   { opacity: 0; transform: translateX(50px) scale(0.95); max-height: 0; padding: 0; }
+}
+@keyframes flashBarShrink {
+  from { width: 100%; }
+  to   { width: 0%;   }
 }
 
 .form-row {

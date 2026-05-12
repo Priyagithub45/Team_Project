@@ -121,30 +121,25 @@ include 'header.php';
 if (!empty($_SESSION['cart_success'])) {
     $flash = $_SESSION['cart_success'];
     unset($_SESSION['cart_success']);
-    echo '<div class="product-flash product-flash-success">'
-       . '<span class="material-icons">check_circle</span>'
-       . '<span>' . htmlspecialchars($flash) . '</span>'
-       . '<a href="cart.php">View cart</a>'
-       . '</div>';
+    echo '<div class="cfo-flash cfo-flash-success" style="display:none" data-extra-html="&lt;a href=\'cart.php\' class=\'cfo-flash-link\'&gt;View cart&lt;/a&gt;">'
+       . htmlspecialchars($flash) . '</div>';
 }
 if (!empty($_SESSION['cart_error'])) {
     $flash = $_SESSION['cart_error'];
     unset($_SESSION['cart_error']);
-    echo '<div class="product-flash product-flash-error">'
-       . '<span class="material-icons">error</span>'
-       . '<span>' . htmlspecialchars($flash) . '</span>'
-       . '</div>';
+    echo '<div class="cfo-flash cfo-flash-error" style="display:none">'
+       . htmlspecialchars($flash) . '</div>';
 }
 if (!empty($_SESSION['review_success'])) {
     $flash = $_SESSION['review_success'];
     unset($_SESSION['review_success']);
-    echo '<div style="background:#d1fae5;color:#065f46;padding:0.75rem 1.5rem;max-width:1200px;margin:1rem auto;border-radius:6px;">'
+    echo '<div class="cfo-flash cfo-flash-success" style="display:none">'
        . htmlspecialchars($flash) . '</div>';
 }
 if (!empty($_SESSION['review_error'])) {
     $flash = $_SESSION['review_error'];
     unset($_SESSION['review_error']);
-    echo '<div style="background:#fee2e2;color:#991b1b;padding:0.75rem 1.5rem;max-width:1200px;margin:1rem auto;border-radius:6px;">'
+    echo '<div class="cfo-flash cfo-flash-error" style="display:none">'
        . htmlspecialchars($flash) . '</div>';
 }
 ?>

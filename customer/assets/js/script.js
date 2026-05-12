@@ -150,8 +150,59 @@ function initUiPolish() {
         });
     });
 
-    document.querySelectorAll('[style*="background:#efe"], [style*="background:#fee"], [style*="background:#d1fae5"], [style*="background:#fee2e2"]').forEach((el) => {
-        el.classList.add('toast-message');
+}
+
+function initFlashToasts() {
+    var DURATION = 4500;
+
+    function getContainer() {
+        var c = document.getElementById('cfo-toast-container');
+        if (!c) {
+            c = document.createElement('div');
+            c.id = 'cfo-toast-container';
+            c.className = 'cfo-toast-container';
+            document.body.appendChild(c);
+        }
+        return c;
+    }
+
+    function dismissToast(toast) {
+        if (toast.dataset.dismissed) return;
+        toast.dataset.dismissed = '1';
+        toast.classList.add('cfo-toast-hiding');
+        setTimeout(function () { toast.remove(); }, 300);
+    }
+
+    function showToast(text, type, extraHtml) {
+        var container = getContainer();
+        var isSuccess = type === 'success';
+        var icon = isSuccess ? 'check_circle' : 'error';
+        var typeClass = isSuccess ? 'cfo-toast-success' : 'cfo-toast-error';
+
+        var toast = document.createElement('div');
+        toast.className = 'cfo-toast ' + typeClass;
+        toast.innerHTML =
+            '<span class="material-icons cfo-toast-icon">' + icon + '</span>' +
+            '<div class="cfo-toast-body">' + text + (extraHtml || '') + '</div>' +
+            '<button class="cfo-toast-close" aria-label="Dismiss">&times;</button>' +
+            '<div class="cfo-toast-bar"></div>';
+
+        var bar = toast.querySelector('.cfo-toast-bar');
+        bar.style.animation = 'cfoBarShrink ' + (DURATION / 1000) + 's linear forwards';
+
+        toast.querySelector('.cfo-toast-close').addEventListener('click', function () {
+            dismissToast(toast);
+        });
+
+        container.appendChild(toast);
+        setTimeout(function () { dismissToast(toast); }, DURATION);
+    }
+
+    document.querySelectorAll('.cfo-flash').forEach(function (el) {
+        var type = el.classList.contains('cfo-flash-success') ? 'success' : 'error';
+        var extra = el.dataset.extraHtml || null;
+        showToast(el.textContent.trim(), type, extra);
+        el.remove();
     });
 }
 
@@ -162,6 +213,7 @@ if (document.readyState === 'loading') {
         initAuthTabs();
         initStarRating();
         initUiPolish();
+        initFlashToasts();
     });
 } else {
     initSlotSelection();
@@ -169,4 +221,5 @@ if (document.readyState === 'loading') {
     initAuthTabs();
     initStarRating();
     initUiPolish();
+    initFlashToasts();
 }
