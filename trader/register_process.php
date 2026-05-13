@@ -1,5 +1,6 @@
 <?php
 require_once '../db.php';
+require_once '../mail_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: register.php');
@@ -85,6 +86,7 @@ $shop_name = post_string('shop_name');
 $category_raw = post_string('category_id');
 $business_description = post_string('business_description');
 $notes = post_string('notes');
+$email_consent = post_string('email_consent') === '1';
 
 $old = [
     'owner_name' => $owner_name,
@@ -95,6 +97,7 @@ $old = [
     'shop_name' => $shop_name,
     'business_description' => $business_description,
     'notes' => $notes,
+    'email_consent' => $email_consent ? '1' : '',
 ];
 
 $errors = [];
@@ -151,6 +154,10 @@ if ($business_description === '') {
 
 if (strlen($notes) > 500) {
     $errors[] = 'Notes must be 500 characters or fewer.';
+}
+
+if (!$email_consent) {
+    $errors['email_consent'] = 'Please agree to receive transactional emails about your trader application and account.';
 }
 
 if (!empty($errors)) {
@@ -226,6 +233,15 @@ if ($application_shop_count !== null && $application_shop_count > 0) {
 }
 
 $has_license_column = table_column_exists($conn, 'TRADER_APPLICATION', 'LICENSE_NO');
+$has_email_consent_column = table_column_exists($conn, 'TRADER_APPLICATION', 'EMAIL_CONSENT');
+$has_email_consent_at_column = table_column_exists($conn, 'TRADER_APPLICATION', 'EMAIL_CONSENT_AT');
+$has_email_verify_token_column = table_column_exists($conn, 'TRADER_APPLICATION', 'EMAIL_VERIFY_TOKEN');
+$has_email_otp_hash_column = table_column_exists($conn, 'TRADER_APPLICATION', 'EMAIL_VERIFY_OTP_HASH');
+$has_email_otp_expires_column = table_column_exists($conn, 'TRADER_APPLICATION', 'EMAIL_VERIFY_OTP_EXPIRES_AT');
+$has_email_otp_attempts_column = table_column_exists($conn, 'TRADER_APPLICATION', 'EMAIL_VERIFY_OTP_ATTEMPTS');
+$email_verify_token = $has_email_verify_token_column ? bin2hex(random_bytes(32)) : '';
+$email_otp = ($has_email_otp_hash_column && $has_email_otp_expires_column) ? (string)random_int(100000, 999999) : '';
+$email_otp_hash = $email_otp !== '' ? password_hash($email_otp, PASSWORD_DEFAULT) : '';
 
 if (!empty($errors)) {
     redirect_with_errors($errors, $old);
@@ -251,6 +267,36 @@ $values = [
 if ($has_license_column) {
     $columns[] = 'LICENSE_NO';
     $values[] = ':license_no';
+}
+
+if ($has_email_consent_column) {
+    $columns[] = 'EMAIL_CONSENT';
+    $values[] = ':email_consent';
+}
+
+if ($has_email_consent_at_column) {
+    $columns[] = 'EMAIL_CONSENT_AT';
+    $values[] = 'SYSTIMESTAMP';
+}
+
+if ($has_email_verify_token_column) {
+    $columns[] = 'EMAIL_VERIFY_TOKEN';
+    $values[] = ':email_verify_token';
+}
+
+if ($has_email_otp_hash_column) {
+    $columns[] = 'EMAIL_VERIFY_OTP_HASH';
+    $values[] = ':email_verify_otp_hash';
+}
+
+if ($has_email_otp_expires_column) {
+    $columns[] = 'EMAIL_VERIFY_OTP_EXPIRES_AT';
+    $values[] = "SYSTIMESTAMP + INTERVAL '15' MINUTE";
+}
+
+if ($has_email_otp_attempts_column) {
+    $columns[] = 'EMAIL_VERIFY_OTP_ATTEMPTS';
+    $values[] = '0';
 }
 
 $columns = array_merge($columns, [
@@ -285,6 +331,16 @@ oci_bind_by_name($stmt, ':shop_name', $shop_name);
 if ($has_license_column) {
     oci_bind_by_name($stmt, ':license_no', $license_no);
 }
+if ($has_email_consent_column) {
+    $email_consent_value = $email_consent ? 1 : 0;
+    oci_bind_by_name($stmt, ':email_consent', $email_consent_value);
+}
+if ($has_email_verify_token_column) {
+    oci_bind_by_name($stmt, ':email_verify_token', $email_verify_token);
+}
+if ($has_email_otp_hash_column) {
+    oci_bind_by_name($stmt, ':email_verify_otp_hash', $email_otp_hash);
+}
 oci_bind_by_name($stmt, ':category_id', $category_id);
 oci_bind_by_name($stmt, ':business_description', $business_description);
 oci_bind_by_name($stmt, ':notes', $notes);
@@ -300,6 +356,29 @@ if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
 oci_commit($conn);
 oci_free_statement($stmt);
 
-$_SESSION['trader_application_success'] = 'Your trader application has been submitted. The admin team will review it before login access is enabled.';
-header('Location: register.php');
+if ($email_otp !== '') {
+    try {
+        if (!send_trader_application_otp_email($email, $owner_name, $email_otp)) {
+            error_log('[TRADER APPLICATION] OTP email was not sent to ' . $email);
+        }
+    } catch (Throwable $e) {
+        error_log('[TRADER APPLICATION] OTP email error for ' . $email . ': ' . $e->getMessage());
+    }
+} elseif ($email_verify_token !== '') {
+    try {
+        if (!send_trader_application_verification_email($email, $owner_name, $email_verify_token)) {
+            error_log('[TRADER APPLICATION] Verification email was not sent to ' . $email);
+        }
+    } catch (Throwable $e) {
+        error_log('[TRADER APPLICATION] Verification email error for ' . $email . ': ' . $e->getMessage());
+    }
+}
+
+if ($email_otp !== '') {
+    $_SESSION['trader_application_success'] = 'Your trader application has been submitted. Enter the OTP sent to your email to authorize this application.';
+    header('Location: verify_application_email.php?email=' . rawurlencode($email));
+} else {
+    $_SESSION['trader_application_success'] = 'Your trader application has been submitted. The admin team will review it before login access is enabled.';
+    header('Location: register.php');
+}
 exit;

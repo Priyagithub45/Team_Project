@@ -1,0 +1,141 @@
+[Wed 05/13/2026 16:10:30.26] Starting mail dispatch 
+PHP Warning:  session_start(): open(C:\xampp\tmp\sess_utqombtcmvmghto693uk4sic5g, O_RDWR) failed: Permission denied (13) in C:\xampp\htdocs\CFO\db.php on line 4
+
+Warning: session_start(): open(C:\xampp\tmp\sess_utqombtcmvmghto693uk4sic5g, O_RDWR) failed: Permission denied (13) in C:\xampp\htdocs\CFO\db.php on line 4
+PHP Warning:  session_start(): Failed to read session data: files (path: C:\xampp\tmp) in C:\xampp\htdocs\CFO\db.php on line 4
+
+Warning: session_start(): Failed to read session data: files (path: C:\xampp\tmp) in C:\xampp\htdocs\CFO\db.php on line 4
+PHP Warning:  oci_connect(): ORA-12638: Failed to retrieve credentials for NTS [Unknown error]
+Help: https://docs.oracle.com/error-help/db/ora-12638/ in C:\xampp\htdocs\CFO\db.php on line 23
+
+Warning: oci_connect(): ORA-12638: Failed to retrieve credentials for NTS [Unknown error]
+Help: https://docs.oracle.com/error-help/db/ora-12638/ in C:\xampp\htdocs\CFO\db.php on line 23
+[DB CONNECT] ORA-12638: Failed to retrieve credentials for NTS [Unknown error]
+Help: https://docs.oracle.com/error-help/db/ora-12638/
+Database is currently unavailable. Please try again shortly.[Wed 05/13/2026 16:10:30.65] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:11:02.34] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+[Wed 05/13/2026 16:11:02.62] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:11:40.15] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:11:47.79] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:12:02.24] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:12:08.68] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:13:02.10] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:13:07.29] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:14:02.16] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:14:07.71] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:15:02.14] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:15:07.65] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:16:02.14] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:16:07.27] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:17:02.12] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:17:08.28] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:18:02.15] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:18:07.31] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:19:02.22] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:19:08.87] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:20:09.64] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:20:16.61] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:21:03.62] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:21:09.55] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:22:03.64] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:22:10.16] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:23:04.09] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:23:14.28] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:24:03.68] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:24:11.44] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:25:04.01] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:25:10.50] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:26:04.66] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:26:10.84] Finished mail dispatch 
+ 
+[Wed 05/13/2026 16:27:03.62] Starting mail dispatch 
+Processed: 0
+Sent: 0
+Failed: 0
+
+[Wed 05/13/2026 16:27:09.63] Finished mail dispatch 
+ 

@@ -22,9 +22,11 @@ function h(string $value): string
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Trader Login &mdash; Cleckhuddesfax Online Mart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="trader.css">
 </head>
 <body class="trader-auth-page">
+
 <header class="apply-header">
     <div class="apply-container apply-header-inner">
         <a class="apply-brand" href="../customer/index.php">
@@ -34,23 +36,33 @@ function h(string $value): string
                 <small>ONLINE MART</small>
             </span>
         </a>
-        <nav class="apply-nav" aria-label="Trader login navigation">
+        <nav class="apply-nav" aria-label="Trader navigation">
             <a href="../customer/index.php">Customer Site</a>
-            <a href="register.php" class="apply-nav-cta">Apply</a>
+            <a href="register.php" class="apply-nav-cta">Apply to Trade</a>
         </nav>
     </div>
 </header>
 
-<main class="auth-login-shell">
-    <section class="auth-login-panel">
-        <div class="auth-login-copy">
-            <span class="apply-eyebrow">Trader Portal</span>
-            <h1>Sign in to your shop workspace</h1>
-            <p>Manage products, stock, collection orders, and reports after your trader account has been approved by admin.</p>
-        </div>
+<div class="auth-split">
 
-        <div class="auth-login-card">
-            <h2>Trader Login</h2>
+    <div class="auth-panel-left" aria-hidden="true">
+        <div class="auth-panel-left-inner">
+            <span class="apply-eyebrow">Trader Portal</span>
+            <h1>Your Shop.<br><em>Your Rules.</em></h1>
+            <p>Manage products, monitor stock levels, and track your sales — all from one workspace once your account is approved by admin.</p>
+            <ul class="auth-features">
+                <li>List &amp; manage your products</li>
+                <li>Monitor stock &amp; collection orders</li>
+                <li>Access daily and weekly reports</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="auth-panel-right">
+        <div class="auth-form-inner">
+            <span class="apply-eyebrow">Welcome back</span>
+            <h2>Sign In</h2>
+            <p class="auth-form-subtitle">Enter your credentials to access your workspace.</p>
 
             <?php if ($success !== ''): ?>
                 <div class="alert alert-success"><?= h($success) ?></div>
@@ -68,30 +80,40 @@ function h(string $value): string
 
             <form method="post" action="login_process.php" autocomplete="off" novalidate>
                 <div class="field">
-                    <label for="email">Email Address <span class="required-star" aria-hidden="true">*</span></label>
+                    <label for="email">
+                        Email Address <span class="required-star" aria-hidden="true">*</span>
+                    </label>
                     <input type="email" id="email" name="email" required autocomplete="email"
-                           value="<?= h((string)($old['email'] ?? '')) ?>">
+                           value="<?= h((string)($old['email'] ?? '')) ?>"
+                           placeholder="you@example.com">
                 </div>
 
                 <div class="field">
-                    <label for="password">Password <span class="required-star" aria-hidden="true">*</span></label>
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                    <label for="password">
+                        Password <span class="required-star" aria-hidden="true">*</span>
+                        <a href="forgot_password.php" class="auth-muted-link" style="margin:0;display:inline;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;">Forgot?</a>
+                    </label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password"
+                           placeholder="••••••••">
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Login</button>
-                    <a href="register.php" class="btn btn-ghost">Apply</a>
+                    <button type="submit" class="btn btn-primary">Sign In</button>
+                    <a href="register.php" class="btn btn-ghost">Apply to Trade</a>
                 </div>
-
-                <a class="auth-muted-link" href="forgot_password.php">Forgot password?</a>
             </form>
+
+            <div class="auth-signup-prompt">
+                New trader? <a href="register.php">Submit an application</a>
+            </div>
         </div>
-    </section>
-</main>
+    </div>
+
+</div>
 
 <footer class="apply-footer">
     <div class="apply-container">
-        <span>CLECKHUDDESFAX ONLINE MART</span>
+        <span>Cleckhuddesfax Online Mart</span>
         <span>&copy; 2026</span>
     </div>
 </footer>

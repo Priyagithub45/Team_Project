@@ -4,6 +4,7 @@
  */
 include '../db.php';
 include 'auth_check.php';
+require_once '../mail_helpers.php';
 
 $is_paypal_return = false;
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['paypal'] ?? '') === 'success') {
@@ -329,6 +330,14 @@ if (!$is_buy_now) {
 if (!oci_commit($conn)) {
     $error = oci_error($conn);
     redirect_order_failure($conn, order_error_message('Could not complete your order. Please try again.', $error));
+}
+
+try {
+    if (!send_order_confirmation_email($conn, (int)$order_id)) {
+        error_log('[PLACE ORDER] Order confirmation email was not sent for order #' . $order_id);
+    }
+} catch (Throwable $e) {
+    error_log('[PLACE ORDER] Order confirmation email error for order #' . $order_id . ': ' . $e->getMessage());
 }
 
 unset($_SESSION['selected_slot_id']);
