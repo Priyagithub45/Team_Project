@@ -1,5 +1,6 @@
 <?php
 include '../db.php';
+require_once '../csrf.php';
 include 'product_image_helper.php';
 
 $is_logged_in = isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer';
@@ -194,6 +195,7 @@ include 'header.php';
                             </div>
                             <?php if ($is_logged_in): ?>
                             <form method="post" action="remove_cart_item.php" style="display:inline;">
+                                <?= csrf_field('customer_cart') ?>
                                 <input type="hidden" name="item_id" value="<?php echo (int)$item['CART_ITEM_ID']; ?>">
                                 <button type="submit" class="cart-remove-link"
                                         style="background:none;border:none;cursor:pointer;color:#f97316;font-size:inherit;font-family:inherit;">
@@ -202,6 +204,7 @@ include 'header.php';
                             </form>
                             <?php else: ?>
                             <form method="post" action="remove_cart_item.php" style="display:inline;">
+                                <?= csrf_field('customer_cart') ?>
                                 <input type="hidden" name="product_id" value="<?php echo (int)$item['PRODUCT_ID']; ?>">
                                 <input type="hidden" name="guest" value="1">
                                 <button type="submit" class="cart-remove-link"
@@ -350,6 +353,8 @@ include 'header.php';
         const isGuest = stepper.dataset.guest === '1';
 
         const formData = new FormData();
+        formData.append('csrf_context', 'customer_cart');
+        formData.append('csrf_token', '<?php echo htmlspecialchars(csrf_token('customer_cart'), ENT_QUOTES, 'UTF-8'); ?>');
         formData.append('item_id', iid);
         formData.append('qty', qty);
         if (isGuest) {

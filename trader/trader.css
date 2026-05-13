@@ -1428,6 +1428,14 @@ h3 {
   gap: 18px;
 }
 
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+  align-items: stretch;
+}
+
 .dashboard-panel {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -1820,6 +1828,183 @@ button[disabled] {
   margin-bottom: 18px;
 }
 
+.dashboard-charts .chart-panel {
+  margin-bottom: 0;
+}
+
+.dashboard-charts .dashboard-panel {
+  min-height: 430px;
+}
+
+.db-svg-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.product-revenue-svg,
+.collection-slot-svg {
+  min-width: 560px;
+  max-height: 350px;
+}
+
+.horizontal-bar-chart {
+  display: grid;
+  gap: 11px;
+  padding: 12px 0 2px;
+}
+
+.hbar-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 26px;
+}
+
+.hbar-label {
+  overflow: hidden;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hbar-track {
+  position: relative;
+  height: 22px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(20% - 1px),
+      rgba(148, 163, 184, 0.28) calc(20% - 1px),
+      rgba(148, 163, 184, 0.28) 20%
+    );
+  border-left: 1px solid #cbd5e1;
+}
+
+.hbar-track::before {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: #edf2f7;
+}
+
+.hbar-fill {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
+  min-width: 34px;
+  align-items: center;
+  justify-content: flex-end;
+  background: #2f9ed8;
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.12);
+}
+
+.hbar-fill span {
+  padding: 0 6px;
+  color: #0f2533;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hbar-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 192px;
+  padding-top: 4px;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.slot-column-chart {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 320px;
+  padding: 8px 6px 4px 0;
+}
+
+.slot-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 0 26px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.slot-plot {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(78px, 1fr));
+  gap: 18px;
+  align-items: end;
+  min-height: 292px;
+  padding: 0 16px 26px;
+  border-bottom: 1px solid #94a3b8;
+  background:
+    repeating-linear-gradient(
+      to top,
+      rgba(226, 232, 240, 0.95) 0,
+      rgba(226, 232, 240, 0.95) 1px,
+      transparent 1px,
+      transparent 25%
+    );
+}
+
+.slot-bar-wrap {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-height: 266px;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.slot-bar {
+  position: relative;
+  width: min(100%, 120px);
+  min-height: 0;
+  background: #0f5f08;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.14);
+}
+
+.slot-bar span {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.slot-bar-wrap strong {
+  position: absolute;
+  bottom: -24px;
+  left: 0;
+  width: 100%;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
 .revenue-chart-wrap {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
@@ -2207,6 +2392,7 @@ input[type="file"] {
 
   .dashboard-actions,
   .dashboard-metrics,
+  .dashboard-charts,
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -2879,6 +3065,7 @@ textarea:focus-visible {
   .responsive-table,
   .report-section,
   .revenue-chart-wrap,
+  .dashboard-charts,
   .dashboard-panel {
     max-width: 100%;
     overflow-x: auto;
@@ -2945,6 +3132,24 @@ textarea:focus-visible {
   .form-card,
   .application-card {
     padding: 1rem;
+  }
+
+  .hbar-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .hbar-label {
+    text-align: left;
+    white-space: normal;
+  }
+
+  .hbar-axis {
+    margin-left: 0;
+  }
+
+  .slot-column-chart {
+    min-width: 340px;
   }
 }
 

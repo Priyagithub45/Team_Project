@@ -1,5 +1,6 @@
 <?php
 include '../db.php';
+require_once '../csrf.php';
 include 'product_image_helper.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
@@ -207,6 +208,7 @@ if (!empty($_SESSION['review_error'])) {
                 <?php endif; ?>
 
                 <form method="post" action="add_to_cart.php">
+                    <?= csrf_field('customer_cart') ?>
                     <input type="hidden" name="product_id" value="<?php echo (int)$row['PRODUCT_ID']; ?>">
 
                     <div class="product-quantity-row">
@@ -315,6 +317,7 @@ if (!empty($_SESSION['review_error'])) {
                 <div class="review-form-card">
                     <h3>Share your thoughts</h3>
                     <form method="post" action="submit_review.php">
+                        <?= csrf_field('customer_review') ?>
                         <input type="hidden" name="product_id" value="<?php echo (int)$row['PRODUCT_ID']; ?>">
 
                         <div class="rating-input">

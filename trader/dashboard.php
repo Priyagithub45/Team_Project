@@ -86,6 +86,7 @@ if ($trader_status === '') {
 $active_product_filter = trader_product_status_column_exists($conn)
     ? "AND NVL(UPPER(p.STATUS), 'ACTIVE') = 'ACTIVE'"
     : '';
+$paid_order_status_sql = "AND UPPER(NVL(o.STATUS, 'PAID')) IN ('PAID', 'PREPARING', 'READY FOR COLLECTION', 'COLLECTED', 'COMPLETED')";
 
 $total_products = (int)dashboard_scalar($conn, "
     SELECT COUNT(*) AS DASH_VALUE
@@ -196,6 +197,66 @@ $upcoming_rows = dashboard_rows($conn, "
     WHERE ROWNUM <= 8
 ", $trader_id, $selected_shop_id);
 
+$product_revenue_rows = dashboard_rows($conn, "
+    SELECT *
+    FROM (
+        SELECT p.PRODUCT_NAME,
+               NVL(SUM(oi.QUANTITY * NVL(oi.PRICE, p.PRICE)), 0) AS TOTAL_REVENUE,
+               NVL(SUM(oi.QUANTITY), 0) AS TOTAL_QUANTITY,
+               COUNT(DISTINCT o.ORDER_ID) AS TOTAL_ORDERS
+        FROM ORDERS o
+        JOIN ORDER_ITEM oi ON oi.ORDER_ID = o.ORDER_ID
+        JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
+        JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
+        WHERE s.TRADER_ID = :trader_id
+          {$shop_filter_sql}
+          {$paid_order_status_sql}
+        GROUP BY p.PRODUCT_NAME
+        ORDER BY TOTAL_REVENUE DESC, p.PRODUCT_NAME
+    )
+    WHERE ROWNUM <= 11
+", $trader_id, $selected_shop_id);
+
+$max_product_revenue = 0.0;
+foreach ($product_revenue_rows as $row) {
+    $max_product_revenue = max($max_product_revenue, (float)($row['TOTAL_REVENUE'] ?? 0));
+}
+
+$slot_time_expr = "REPLACE(REPLACE(cs.COLLECTION_TIME, ' ', ''), ':00', '')";
+$slot_count_rows = dashboard_rows($conn, "
+    SELECT {$slot_time_expr} AS SLOT_KEY,
+           COUNT(DISTINCT o.ORDER_ID) AS ORDER_COUNT
+    FROM ORDERS o
+    JOIN ORDER_ITEM oi ON oi.ORDER_ID = o.ORDER_ID
+    JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
+    JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
+    JOIN COLLECTION_SLOT cs ON cs.SLOT_ID = o.SLOT_ID
+    WHERE s.TRADER_ID = :trader_id
+      {$shop_filter_sql}
+      AND TO_CHAR(cs.COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')
+      AND {$slot_time_expr} IN ('10-13','13-16','16-19')
+      AND TRUNC(cs.COLLECTION_DATE) >= TRUNC(SYSDATE)
+      AND UPPER(NVL(o.STATUS, 'PAID')) <> 'CANCELLED'
+    GROUP BY {$slot_time_expr}
+", $trader_id, $selected_shop_id);
+
+$collection_slot_chart_rows = [
+    '10-13' => ['label' => '10-13', 'count' => 0],
+    '13-16' => ['label' => '13-16', 'count' => 0],
+    '16-19' => ['label' => '16-19', 'count' => 0],
+];
+foreach ($slot_count_rows as $row) {
+    $slot_key = (string)($row['SLOT_KEY'] ?? '');
+    if (isset($collection_slot_chart_rows[$slot_key])) {
+        $collection_slot_chart_rows[$slot_key]['count'] = (int)($row['ORDER_COUNT'] ?? 0);
+    }
+}
+$max_slot_count = 0;
+foreach ($collection_slot_chart_rows as $row) {
+    $max_slot_count = max($max_slot_count, (int)$row['count']);
+}
+$slot_axis_max = max(5, (int)ceil($max_slot_count / 5) * 5);
+
 function stock_badge_class(int $stock): string
 {
     if ($stock <= 0) {
@@ -217,6 +278,16 @@ function stock_label(int $stock): string
     }
     return 'Active';
 }
+
+function chart_label(string $value, int $max_length = 24): string
+{
+    $value = trim($value);
+    if (strlen($value) <= $max_length) {
+        return $value;
+    }
+
+    return substr($value, 0, max(1, $max_length - 3)) . '...';
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -224,7 +295,7 @@ function stock_label(int $stock): string
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trader Dashboard &mdash; <?= h($account_name) ?></title>
-  <link rel="stylesheet" href="trader.css">
+  <link rel="stylesheet" href="trader.css?v=dashboard-charts-3">
 </head>
 <body>
 <div class="sidebar">
@@ -303,6 +374,99 @@ function stock_label(int $stock): string
       <strong><?= h((string)$month_quantity_sold) ?></strong>
       <small>Total item quantity</small>
     </article>
+  </section>
+
+  <section class="dashboard-charts" aria-label="Trader visual reports">
+    <div class="dashboard-panel chart-panel product-revenue-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="apply-eyebrow">Visual Report</span>
+          <h2>Product Revenue Analysis</h2>
+        </div>
+        <a href="reports_monthly_sales.php" class="panel-link">Monthly report</a>
+      </div>
+
+      <?php if (empty($product_revenue_rows) || $max_product_revenue <= 0): ?>
+        <div class="empty-state">No paid product revenue is available yet.</div>
+      <?php else: ?>
+        <?php
+          $row_count = count($product_revenue_rows);
+          $svg_height = 54 + ($row_count * 27);
+          $plot_x = 178;
+          $plot_width = 520;
+          $bar_height = 16;
+        ?>
+        <svg class="db-svg-chart product-revenue-svg" viewBox="0 0 740 <?= h((string)$svg_height) ?>" role="img" aria-labelledby="productRevenueTitle productRevenueDesc">
+          <title id="productRevenueTitle">Product revenue analysis</title>
+          <desc id="productRevenueDesc">Revenue grouped by product from paid and active orders in the database.</desc>
+          <rect x="0" y="0" width="740" height="<?= h((string)$svg_height) ?>" fill="#ffffff"></rect>
+          <?php for ($i = 0; $i <= 5; $i++): ?>
+            <?php $grid_x = $plot_x + (($plot_width / 5) * $i); ?>
+            <line x1="<?= h(number_format($grid_x, 2, '.', '')) ?>" y1="12" x2="<?= h(number_format($grid_x, 2, '.', '')) ?>" y2="<?= h((string)($svg_height - 28)) ?>" stroke="#e5e7eb" stroke-width="1"></line>
+          <?php endfor; ?>
+          <?php foreach ($product_revenue_rows as $index => $row): ?>
+            <?php
+              $revenue = (float)($row['TOTAL_REVENUE'] ?? 0);
+              $bar_width = $max_product_revenue > 0 ? max(3, ($revenue / $max_product_revenue) * $plot_width) : 0;
+              $y = 18 + ($index * 27);
+              $value_x = min($plot_x + $bar_width - 8, $plot_x + $plot_width - 8);
+            ?>
+            <text x="<?= h((string)($plot_x - 10)) ?>" y="<?= h((string)($y + 12)) ?>" text-anchor="end" font-size="11" font-weight="700" fill="#475569">
+              <title><?= h((string)$row['PRODUCT_NAME']) ?></title><?= h(chart_label((string)$row['PRODUCT_NAME'], 22)) ?>
+            </text>
+            <rect x="<?= h((string)$plot_x) ?>" y="<?= h((string)$y) ?>" width="<?= h(number_format($plot_width, 2, '.', '')) ?>" height="<?= h((string)$bar_height) ?>" fill="#f8fafc"></rect>
+            <rect x="<?= h((string)$plot_x) ?>" y="<?= h((string)$y) ?>" width="<?= h(number_format($bar_width, 2, '.', '')) ?>" height="<?= h((string)$bar_height) ?>" fill="#2f9ed8"></rect>
+            <text x="<?= h(number_format($value_x, 2, '.', '')) ?>" y="<?= h((string)($y + 12)) ?>" text-anchor="end" font-size="10" font-weight="800" fill="#0f2533"><?= h(number_format($revenue, 0)) ?></text>
+          <?php endforeach; ?>
+          <line x1="<?= h((string)$plot_x) ?>" y1="<?= h((string)($svg_height - 28)) ?>" x2="<?= h((string)($plot_x + $plot_width)) ?>" y2="<?= h((string)($svg_height - 28)) ?>" stroke="#cbd5e1" stroke-width="1"></line>
+          <text x="<?= h((string)$plot_x) ?>" y="<?= h((string)($svg_height - 9)) ?>" font-size="10" font-weight="700" fill="#64748b">GBP 0</text>
+          <text x="<?= h((string)($plot_x + $plot_width)) ?>" y="<?= h((string)($svg_height - 9)) ?>" text-anchor="end" font-size="10" font-weight="700" fill="#64748b"><?= h(money_value($max_product_revenue)) ?></text>
+        </svg>
+      <?php endif; ?>
+    </div>
+
+    <div class="dashboard-panel chart-panel collection-slot-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="apply-eyebrow">Operations</span>
+          <h2>Collection Slot</h2>
+        </div>
+        <a href="reports_daily.php" class="panel-link">Daily report</a>
+      </div>
+
+      <svg class="db-svg-chart collection-slot-svg" viewBox="0 0 740 330" role="img" aria-labelledby="collectionSlotTitle collectionSlotDesc">
+        <title id="collectionSlotTitle">Collection slot order counts</title>
+        <desc id="collectionSlotDesc">Upcoming distinct order counts grouped by collection slot from the database.</desc>
+        <rect x="0" y="0" width="740" height="330" fill="#ffffff"></rect>
+        <?php
+          $slot_plot_x = 58;
+          $slot_plot_y = 24;
+          $slot_plot_width = 640;
+          $slot_plot_height = 238;
+          $axis_values = [$slot_axis_max, (int)round($slot_axis_max * 0.75), (int)round($slot_axis_max * 0.5), (int)round($slot_axis_max * 0.25), 0];
+        ?>
+        <?php foreach ($axis_values as $i => $axis_value): ?>
+          <?php $line_y = $slot_plot_y + (($slot_plot_height / 4) * $i); ?>
+          <text x="40" y="<?= h((string)($line_y + 4)) ?>" text-anchor="end" font-size="13" font-weight="700" fill="#64748b"><?= h((string)$axis_value) ?></text>
+          <line x1="<?= h((string)$slot_plot_x) ?>" y1="<?= h(number_format($line_y, 2, '.', '')) ?>" x2="<?= h((string)($slot_plot_x + $slot_plot_width)) ?>" y2="<?= h(number_format($line_y, 2, '.', '')) ?>" stroke="#e5e7eb" stroke-width="1"></line>
+        <?php endforeach; ?>
+        <line x1="<?= h((string)$slot_plot_x) ?>" y1="<?= h((string)($slot_plot_y + $slot_plot_height)) ?>" x2="<?= h((string)($slot_plot_x + $slot_plot_width)) ?>" y2="<?= h((string)($slot_plot_y + $slot_plot_height)) ?>" stroke="#94a3b8" stroke-width="1"></line>
+        <?php $slot_index = 0; foreach ($collection_slot_chart_rows as $slot): ?>
+          <?php
+            $slot_count = (int)$slot['count'];
+            $bar_width = 112;
+            $bar_x = $slot_plot_x + 72 + ($slot_index * 202);
+            $bar_height = $slot_axis_max > 0 ? (($slot_count / $slot_axis_max) * $slot_plot_height) : 0;
+            $bar_y = $slot_plot_y + $slot_plot_height - $bar_height;
+          ?>
+          <rect x="<?= h((string)$bar_x) ?>" y="<?= h(number_format($bar_y, 2, '.', '')) ?>" width="<?= h((string)$bar_width) ?>" height="<?= h(number_format($bar_height, 2, '.', '')) ?>" fill="#0f5f08"></rect>
+          <?php if ($slot_count > 0): ?>
+            <text x="<?= h((string)($bar_x + ($bar_width / 2))) ?>" y="<?= h(number_format(max($slot_plot_y + 16, $bar_y - 8), 2, '.', '')) ?>" text-anchor="middle" font-size="14" font-weight="900" fill="#1c2b41"><?= h((string)$slot_count) ?></text>
+          <?php endif; ?>
+          <text x="<?= h((string)($bar_x + ($bar_width / 2))) ?>" y="302" text-anchor="middle" font-size="14" font-weight="800" fill="#64748b"><?= h($slot['label']) ?></text>
+        <?php $slot_index++; endforeach; ?>
+      </svg>
+    </div>
   </section>
 
   <section class="dashboard-grid">

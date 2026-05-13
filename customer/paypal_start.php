@@ -5,6 +5,7 @@
 include '../db.php';
 include 'auth_check.php';
 include 'paypal_config.php';
+require_once 'collection_slot_rules.php';
 
 $user_id = (string)(int)$_SESSION['user_id'];
 
@@ -13,10 +14,7 @@ if (empty($_SESSION['selected_slot_id'])) {
     exit;
 }
 $slot_id = (string)(int)$_SESSION['selected_slot_id'];
-$slot_time_expr = "REPLACE(REPLACE(cs.COLLECTION_TIME, ' ', ''), ':00', '')";
-$allowed_slot_rules_sql = "cs.COLLECTION_DATE >= SYSDATE + 1
-                           AND TO_CHAR(cs.COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')
-                           AND {$slot_time_expr} IN ('10-13','13-16','16-19')";
+$allowed_slot_rules_sql = collection_slot_allowed_sql('cs');
 
 $is_buy_now = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') && !empty($_SESSION['buy_now_item']);
 $items = [];
@@ -125,7 +123,7 @@ if (!$slot_usage) {
     exit;
 }
 
-if ((int)($slot_usage['USED_COUNT'] ?? 20) >= 20) {
+if ((int)($slot_usage['USED_COUNT'] ?? COLLECTION_SLOT_MAX_ORDERS) >= COLLECTION_SLOT_MAX_ORDERS) {
     $_SESSION['order_error'] = 'Selected collection slot is now full. Please choose another slot.';
     header('Location: checkout.php?mode=' . ($is_buy_now ? 'buy_now' : 'cart'));
     exit;

@@ -6,6 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: products.php');
     exit;
 }
+csrf_require_post('trader_product_delete');
 
 $product_id = filter_input(INPUT_POST, 'product_id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$product_id) {

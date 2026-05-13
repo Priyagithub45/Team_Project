@@ -1,5 +1,6 @@
 <?php
 include '../db.php';
+require_once '../csrf.php';
 
 $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
         && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -7,6 +8,16 @@ $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: cart.php');
     exit;
+}
+
+if (!csrf_is_valid('customer_cart')) {
+    if ($is_ajax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Security check failed. Please refresh the page and try again.']);
+        exit;
+    }
+    http_response_code(403);
+    exit('Security check failed. Please go back, refresh the page, and try again.');
 }
 
 // Guest path — remove by product_id from session

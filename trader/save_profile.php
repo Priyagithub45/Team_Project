@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: profile.php');
     exit;
 }
+csrf_require_post('trader_profile');
 
 function profile_post(string $key): string
 {
@@ -312,6 +313,89 @@ if ($save_section === 'shop') {
     }
 
     trader_profile_flash_set('success', 'Shop "' . $shop_name . '" updated successfully.');
+    header('Location: profile.php');
+    exit;
+}
+
+// ── Password change ─────────────────────────────────────────────────────────
+if ($save_section === 'password') {
+    $current_pw = (string)($_POST['current_password'] ?? '');
+    $new_pw     = (string)($_POST['new_password'] ?? '');
+    $confirm_pw = (string)($_POST['confirm_password'] ?? '');
+
+    $errors = ['_section' => 'password'];
+
+    if ($current_pw === '') {
+        $errors['current_password'] = 'Current password is required.';
+    }
+    if ($new_pw === '') {
+        $errors['new_password'] = 'New password is required.';
+    } elseif (strlen($new_pw) < 8) {
+        $errors['new_password'] = 'New password must be at least 8 characters.';
+    }
+    if ($confirm_pw === '') {
+        $errors['confirm_password'] = 'Please confirm your new password.';
+    } elseif ($new_pw !== '' && $new_pw !== $confirm_pw) {
+        $errors['confirm_password'] = 'Passwords do not match.';
+    }
+
+    if (count($errors) === 1) {
+        $stmt = oci_parse($conn, 'SELECT PASSWORD FROM SYSTEM_USER WHERE USER_ID = :user_id');
+        if (!$stmt) {
+            $errors['_general'] = 'Could not verify current password. Please try again.';
+        } else {
+            oci_bind_by_name($stmt, ':user_id', $current_trader_id);
+            if (!oci_execute($stmt)) {
+                oci_free_statement($stmt);
+                $errors['_general'] = 'Could not verify current password. Please try again.';
+            } else {
+                $row    = oci_fetch_assoc($stmt);
+                oci_free_statement($stmt);
+                $stored         = (string)($row['PASSWORD'] ?? '');
+                $stored_trimmed = trim($stored);
+                $cur_trimmed    = trim($current_pw);
+
+                $pw_ok   = password_verify($current_pw, $stored) || password_verify($cur_trimmed, $stored_trimmed);
+                $pw_info = password_get_info($stored_trimmed);
+                $is_legacy = ($pw_info['algo'] ?? null) === null || ($pw_info['algoName'] ?? 'unknown') === 'unknown';
+                if (!$pw_ok && $is_legacy) {
+                    $pw_ok = hash_equals($stored, $current_pw) || hash_equals($stored_trimmed, $cur_trimmed);
+                }
+                if (!$pw_ok) {
+                    $errors['current_password'] = 'Current password is incorrect.';
+                }
+            }
+        }
+    }
+
+    if (count($errors) > 1) {
+        trader_profile_errors_set($errors);
+        header('Location: profile.php');
+        exit;
+    }
+
+    $new_hash = password_hash($new_pw, PASSWORD_DEFAULT);
+    $stmt = oci_parse($conn, 'UPDATE SYSTEM_USER SET PASSWORD = :password WHERE USER_ID = :user_id');
+    if (!$stmt) {
+        $err = oci_error($conn);
+        error_log('[TRADER CHANGE PASSWORD PARSE] ' . ($err['message'] ?? 'unknown'));
+        trader_profile_errors_set(['_section' => 'password', '_general' => 'Could not update password. Please try again.']);
+        header('Location: profile.php');
+        exit;
+    }
+    oci_bind_by_name($stmt, ':password', $new_hash);
+    oci_bind_by_name($stmt, ':user_id',  $current_trader_id);
+    if (!oci_execute($stmt)) {
+        $err = oci_error($stmt);
+        error_log('[TRADER CHANGE PASSWORD] ' . ($err['message'] ?? 'unknown'));
+        oci_rollback($conn);
+        trader_profile_errors_set(['_section' => 'password', '_general' => 'Could not update password. Please try again.']);
+        header('Location: profile.php');
+        exit;
+    }
+    oci_free_statement($stmt);
+    oci_commit($conn);
+    trader_profile_flash_set('success', 'Password changed successfully.');
     header('Location: profile.php');
     exit;
 }

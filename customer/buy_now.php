@@ -7,6 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+csrf_require_post('customer_cart');
+
 $product_id = filter_input(INPUT_POST, 'product_id', FILTER_VALIDATE_INT);
 $quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT);
 $back = ($product_id && $product_id > 0) ? 'product.php?id=' . (int)$product_id : 'category.php';

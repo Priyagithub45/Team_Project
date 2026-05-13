@@ -1,30 +1,24 @@
 <?php
 include '../db.php';
 include 'auth_check.php';
+require_once 'collection_slot_rules.php';
 
-$allowed_slot_day_sql = "TO_CHAR(COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')";
-$slot_time_expr = "REPLACE(REPLACE(COLLECTION_TIME, ' ', ''), ':00', '')";
-$allowed_slot_time_sql = "{$slot_time_expr} IN ('10-13','13-16','16-19')";
-$slot_order_sql = "CASE {$slot_time_expr}
-                       WHEN '10-13' THEN 1
-                       WHEN '13-16' THEN 2
-                       WHEN '16-19' THEN 3
-                       ELSE 9
-                   END";
+$allowed_slot_rules_sql = collection_slot_allowed_sql('cs');
+$slot_order_sql = collection_slot_order_sql('cs');
 
 // Handle slot selection POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_require_post('customer_collection_slot');
+
     $slot_id = filter_input(INPUT_POST, 'slot_id', FILTER_VALIDATE_INT);
     $is_buy_now_checkout = !empty($_SESSION['buy_now_item']) && (($_SESSION['checkout_mode'] ?? '') === 'buy_now');
 
     if ($slot_id && $slot_id > 0) {
         $slot_sql = "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION,
-                            (20 - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) AS REMAINING
+                            (" . COLLECTION_SLOT_MAX_ORDERS . " - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) AS REMAINING
                      FROM COLLECTION_SLOT cs
                      WHERE SLOT_ID = :p_sid
-                       AND COLLECTION_DATE >= SYSDATE + 1
-                       AND {$allowed_slot_day_sql}
-                       AND {$allowed_slot_time_sql}";
+                       AND {$allowed_slot_rules_sql}";
         $slot_stmt = oci_parse($conn, $slot_sql);
         oci_bind_by_name($slot_stmt, ':p_sid', $slot_id);
         oci_execute($slot_stmt);
@@ -47,9 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             unset($_SESSION['selected_slot_id']);
             if ($is_buy_now_checkout) {
-                $_SESSION['checkout_notice'] = '';
+                $_SESSION['order_error'] = 'Selected collection slot is no longer available. The slot may be full or less than 24 hours away.';
             } else {
-                $_SESSION['cart_error'] = 'Selected collection slot is no longer available. Please choose another slot.';
+                $_SESSION['cart_error'] = 'Selected collection slot is no longer available. The slot may be full or less than 24 hours away.';
             }
         }
     }
@@ -57,13 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Query future slots with capacity remaining
+// Query valid future slots. Full slots are still shown, but cannot be selected.
 $sql = "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION,
-               (20 - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) AS REMAINING
+               (" . COLLECTION_SLOT_MAX_ORDERS . " - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) AS REMAINING
         FROM COLLECTION_SLOT cs
-        WHERE COLLECTION_DATE >= SYSDATE + 1
-          AND {$allowed_slot_day_sql}
-          AND {$allowed_slot_time_sql}
+        WHERE {$allowed_slot_rules_sql}
         ORDER BY COLLECTION_DATE, {$slot_order_sql}";
 
 $stmt = oci_parse($conn, $sql);
@@ -82,6 +74,14 @@ while ($row = oci_fetch_assoc($stmt)) {
 oci_free_statement($stmt);
 
 $selected_slot_id = $_SESSION['selected_slot_id'] ?? null;
+$slot_error = '';
+if (!empty($_SESSION['cart_error'])) {
+    $slot_error = $_SESSION['cart_error'];
+    unset($_SESSION['cart_error']);
+} elseif (!empty($_SESSION['order_error'])) {
+    $slot_error = $_SESSION['order_error'];
+    unset($_SESSION['order_error']);
+}
 
 $page_title = 'Select Collection Slot - Cleckhuddesfax Online Mart';
 include 'header.php';
@@ -114,8 +114,14 @@ function slot_time_label(string $t): string {
     <div class="container">
         <div class="slot-header">
             <h1>SELECT COLLECTION SLOT</h1>
-            <p class="slot-subtitle">Choose a Wednesday, Thursday, or Friday pickup. Slots run 10:00-13:00, 13:00-16:00, and 16:00-19:00. Max 20 orders per slot. Must be at least 24 hours from now.</p>
+            <p class="slot-subtitle">Choose one collection slot before payment. Collection is available only on Wednesday, Thursday, and Friday at 10:00-13:00, 13:00-16:00, or 16:00-19:00. Each slot accepts 20 orders and must start at least 24 hours after you order.</p>
         </div>
+
+        <?php if ($slot_error): ?>
+            <div style="background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1.5rem;">
+                <?php echo htmlspecialchars($slot_error); ?>
+            </div>
+        <?php endif; ?>
 
         <?php if (empty($by_date)): ?>
             <div style="text-align:center;padding:3rem;color:#888;">
@@ -151,10 +157,11 @@ function slot_time_label(string $t): string {
                     $is_sel    = ((int)$slot['SLOT_ID'] === (int)$selected_slot_id);
                     $time_str  = htmlspecialchars(slot_time_label($slot['COLLECTION_TIME']));
                     $label     = slot_label($slot['COLLECTION_TIME']);
-                    $used      = max(0, 20 - $remaining);
-                    $filled_pct = min(100, max(0, (int)round(($used / 20) * 100)));
+                    $used      = max(0, COLLECTION_SLOT_MAX_ORDERS - $remaining);
+                    $filled_pct = min(100, max(0, (int)round(($used / COLLECTION_SLOT_MAX_ORDERS) * 100)));
                 ?>
                 <form method="post" action="collection-slot.php">
+                    <?= csrf_field('customer_collection_slot') ?>
                     <input type="hidden" name="slot_id" value="<?php echo (int)$slot['SLOT_ID']; ?>">
                     <button type="submit" class="slot-card <?php echo $is_sel ? 'selected' : ''; ?>"
                             <?php echo $is_full ? 'disabled' : ''; ?>
@@ -173,10 +180,15 @@ function slot_time_label(string $t): string {
                         <?php if (!$is_full): ?>
                         <div class="slot-availability">
                             <span><?php echo $remaining; ?> spot<?php echo $remaining !== 1 ? 's' : ''; ?> left</span>
-                            <span><?php echo $used; ?>/20 booked</span>
+                            <span><?php echo $used; ?>/<?php echo COLLECTION_SLOT_MAX_ORDERS; ?> booked</span>
                         </div>
                         <div class="progress-bar-bg" aria-hidden="true">
                             <div class="progress-bar-fill" style="width:<?php echo $filled_pct; ?>%;"></div>
+                        </div>
+                        <?php else: ?>
+                        <div class="slot-availability">
+                            <span>Slot is full</span>
+                            <span><?php echo COLLECTION_SLOT_MAX_ORDERS; ?>/<?php echo COLLECTION_SLOT_MAX_ORDERS; ?> booked</span>
                         </div>
                         <?php endif; ?>
                     </button>

@@ -73,6 +73,7 @@ $account_name = trader_account_label($current_trader);
     <p class="form-required-legend"><span class="required-star" aria-hidden="true">*</span> Required field</p>
 
     <form method="post" action="save_product.php" enctype="multipart/form-data" class="application-form" novalidate>
+      <?= csrf_field('trader_product_save') ?>
       <div class="form-row">
         <div class="field<?= isset($errors['shop_id']) ? ' has-error' : '' ?>">
           <label for="shop_id">Shop <span class="required-star" aria-hidden="true">*</span></label>

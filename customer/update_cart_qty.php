@@ -1,10 +1,16 @@
 <?php
 include '../db.php';
+require_once '../csrf.php';
 
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request']);
+    exit;
+}
+
+if (!csrf_is_valid('customer_cart')) {
+    echo json_encode(['success' => false, 'error' => 'Security check failed. Please refresh the page and try again.']);
     exit;
 }
 

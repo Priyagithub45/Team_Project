@@ -1,5 +1,6 @@
 <?php
 include '../db.php';
+require_once '../csrf.php';
 
 $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
         && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -23,6 +24,10 @@ function cart_respond(bool $ok, string $msg, string $location = '', ?int $cart_c
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php');
     exit;
+}
+
+if (!csrf_is_valid('customer_cart')) {
+    cart_respond(false, 'Security check failed. Please refresh the page and try again.', 'category.php');
 }
 
 $product_id = filter_input(INPUT_POST, 'product_id', FILTER_VALIDATE_INT);

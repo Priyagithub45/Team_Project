@@ -201,6 +201,7 @@ function product_stock_class(int $stock): string
                   <div class="table-actions">
                     <a href="edit_product.php?id=<?= h((string)$product['PRODUCT_ID']) ?>" class="action-btn btn-edit">Edit</a>
                     <form method="post" action="delete_product.php" onsubmit="return confirm('Inactivate this product?');">
+                      <?= csrf_field('trader_product_delete') ?>
                       <input type="hidden" name="product_id" value="<?= h((string)$product['PRODUCT_ID']) ?>">
                       <button type="submit" class="action-btn btn-delete">Inactivate</button>
                     </form>

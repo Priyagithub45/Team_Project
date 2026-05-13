@@ -95,6 +95,7 @@ $data = array_merge([
     <p class="form-required-legend"><span class="required-star" aria-hidden="true">*</span> Required field</p>
 
     <form method="post" action="update_product.php" enctype="multipart/form-data" class="application-form" novalidate>
+      <?= csrf_field('trader_product_update') ?>
       <input type="hidden" name="product_id" value="<?= h((string)$product_id) ?>">
 
       <div class="form-row">

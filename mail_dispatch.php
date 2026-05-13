@@ -87,7 +87,7 @@ function dispatch_trader_approval_mail($conn, array $mail): bool
         (string)$application['OWNER_NAME'],
         (string)$application['PROPOSED_SHOP_NAME'],
         $login_email,
-        'Trader@123'
+        'default123'
     );
 }
 

@@ -39,7 +39,8 @@ if ($old_section === 'personal') {
 }
 
 // Personal-form errors (only if the personal section failed)
-$personal_errors = ($err_section === 'personal') ? $errors : [];
+$personal_errors  = ($err_section === 'personal') ? $errors : [];
+$password_errors  = ($err_section === 'password')  ? $errors : [];
 
 $user_status   = trim((string)($base_profile['USER_STATUS']   ?? 'Active')) ?: 'Active';
 $trader_status = trim((string)($base_profile['TRADER_STATUS'] ?? 'ACTIVE')) ?: 'ACTIVE';
@@ -228,6 +229,7 @@ foreach ($shops_data as $sd) {
         <?php endif; ?>
 
         <form method="post" action="save_profile.php" class="application-form" novalidate>
+          <?= csrf_field('trader_profile') ?>
           <input type="hidden" name="save_section" value="personal">
 
           <div class="field<?= isset($personal_errors['name']) ? ' has-error' : '' ?>">
@@ -271,6 +273,53 @@ foreach ($shops_data as $sd) {
 
           <div class="form-actions" style="margin-top:16px">
             <button type="submit" class="btn btn-primary profile-v2-save-btn">Save Details</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Change password -->
+      <div class="profile-v2-card">
+        <div class="profile-v2-card-header">
+          <span class="apply-eyebrow">Security</span>
+          <h2>Change Password</h2>
+        </div>
+
+        <?php if (!empty($password_errors['_general'])): ?>
+          <div class="alert alert-error" style="margin-bottom:18px"><?= h((string)$password_errors['_general']) ?></div>
+        <?php endif; ?>
+
+        <form method="post" action="save_profile.php" novalidate>
+          <?= csrf_field('trader_profile') ?>
+          <input type="hidden" name="save_section" value="password">
+
+          <div class="field<?= isset($password_errors['current_password']) ? ' has-error' : '' ?>">
+            <label for="pw_current">Current Password <span class="required-star" aria-hidden="true">*</span></label>
+            <input type="password" id="pw_current" name="current_password" required autocomplete="current-password">
+            <?php if (isset($password_errors['current_password'])): ?>
+              <span class="field-error" role="alert"><?= h((string)$password_errors['current_password']) ?></span>
+            <?php endif; ?>
+          </div>
+
+          <div class="field<?= isset($password_errors['new_password']) ? ' has-error' : '' ?>">
+            <label for="pw_new">New Password <span class="required-star" aria-hidden="true">*</span></label>
+            <input type="password" id="pw_new" name="new_password" required autocomplete="new-password" minlength="8">
+            <?php if (isset($password_errors['new_password'])): ?>
+              <span class="field-error" role="alert"><?= h((string)$password_errors['new_password']) ?></span>
+            <?php else: ?>
+              <span class="field-note">Minimum 8 characters.</span>
+            <?php endif; ?>
+          </div>
+
+          <div class="field<?= isset($password_errors['confirm_password']) ? ' has-error' : '' ?>">
+            <label for="pw_confirm">Confirm New Password <span class="required-star" aria-hidden="true">*</span></label>
+            <input type="password" id="pw_confirm" name="confirm_password" required autocomplete="new-password">
+            <?php if (isset($password_errors['confirm_password'])): ?>
+              <span class="field-error" role="alert"><?= h((string)$password_errors['confirm_password']) ?></span>
+            <?php endif; ?>
+          </div>
+
+          <div class="form-actions" style="margin-top:16px">
+            <button type="submit" class="btn btn-primary profile-v2-save-btn">Change Password</button>
           </div>
         </form>
       </div>
@@ -354,6 +403,7 @@ foreach ($shops_data as $sd) {
             <?php endif; ?>
 
             <form method="post" action="save_profile.php" enctype="multipart/form-data" class="application-form profile-v2-shop-form" novalidate>
+              <?= csrf_field('trader_profile') ?>
               <input type="hidden" name="save_section" value="shop">
               <input type="hidden" name="shop_id" value="<?= h((string)$sid) ?>">
 

@@ -1,6 +1,7 @@
 <?php
 include '../db.php';
 include 'auth_check.php';
+require_once 'collection_slot_rules.php';
 
 $user_id = (string)(int)$_SESSION['user_id'];
 
@@ -22,11 +23,7 @@ if (empty($_SESSION['selected_slot_id'])) {
     exit;
 }
 $slot_id = (string)(int)$_SESSION['selected_slot_id'];
-$slot_time_expr = "REPLACE(REPLACE(cs.COLLECTION_TIME, ' ', ''), ':00', '')";
-$allowed_slot_rules_sql = "cs.COLLECTION_DATE >= SYSDATE + 1
-                           AND TO_CHAR(cs.COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')
-                           AND {$slot_time_expr} IN ('10-13','13-16','16-19')
-                           AND (20 - (SELECT COUNT(*) FROM ORDERS WHERE SLOT_ID = cs.SLOT_ID)) > 0";
+$allowed_slot_rules_sql = collection_slot_allowed_sql('cs', true);
 
 // ── Cart items for this user ──────────────────────────────────────────────────
 $items      = [];
@@ -232,6 +229,7 @@ include 'header.php';
 
             <!-- Place Order Form -->
             <form method="post" action="place_order.php" id="checkout-payment-form" style="margin-top:1.5rem;">
+                <?= csrf_field('customer_checkout') ?>
 
                 <div style="margin-bottom:1rem;">
                     <label style="display:block;font-weight:600;margin-bottom:0.4rem;">PAYMENT METHOD</label>

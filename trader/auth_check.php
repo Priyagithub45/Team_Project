@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../csrf.php';
 
 function trader_auth_redirect(string $message): void
 {

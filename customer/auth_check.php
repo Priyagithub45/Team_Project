@@ -8,6 +8,8 @@
  * Lives at: CFO/customer/auth_check.php
  */
 
+require_once __DIR__ . '/../csrf.php';
+
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
     $guest_cart = $_SESSION['guest_cart'] ?? null;
     session_unset();

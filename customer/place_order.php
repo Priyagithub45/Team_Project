@@ -4,6 +4,7 @@
  */
 include '../db.php';
 include 'auth_check.php';
+require_once 'collection_slot_rules.php';
 require_once '../mail_helpers.php';
 
 $is_paypal_return = false;
@@ -18,6 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['paypal'] ?? '') === 'success
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && !$is_paypal_return) {
     header('Location: checkout.php');
     exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_require_post('customer_checkout');
 }
 
 $user_id = (string)(int)$_SESSION['user_id'];
@@ -107,13 +112,11 @@ function execute_or_fail($conn, $stmt, string $message): void
 }
 
 // Lock the chosen slot so trigger capacity checks cannot race another checkout.
-$slot_time_expr = "REPLACE(REPLACE(COLLECTION_TIME, ' ', ''), ':00', '')";
+$allowed_slot_rules_sql = collection_slot_allowed_sql('cs');
 $stmt = oci_parse($conn, "SELECT SLOT_ID
-                          FROM COLLECTION_SLOT
-                          WHERE SLOT_ID = :p_sid
-                            AND COLLECTION_DATE >= SYSDATE + 1
-                            AND TO_CHAR(COLLECTION_DATE, 'FMDY', 'NLS_DATE_LANGUAGE=ENGLISH') IN ('WED','THU','FRI')
-                            AND {$slot_time_expr} IN ('10-13','13-16','16-19')
+                          FROM COLLECTION_SLOT cs
+                          WHERE cs.SLOT_ID = :p_sid
+                            AND {$allowed_slot_rules_sql}
                           FOR UPDATE");
 oci_bind_by_name($stmt, ':p_sid', $slot_id);
 execute_or_fail($conn, $stmt, 'Could not verify the selected collection slot.');

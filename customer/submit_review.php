@@ -7,6 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+csrf_require_post('customer_review');
+
 $user_id = (string) (int) $_SESSION['user_id'];
 $product_id_raw = filter_input(INPUT_POST, 'product_id', FILTER_VALIDATE_INT);
 $rating_raw = filter_input(INPUT_POST, 'rating', FILTER_VALIDATE_INT);

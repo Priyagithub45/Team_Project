@@ -14,6 +14,8 @@ $update_message = '';
 $profile_error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
+    csrf_require_post('customer_profile');
+
     $new_phone = trim($_POST['phone'] ?? '');
     $new_address = trim($_POST['address'] ?? '');
 
@@ -125,6 +127,7 @@ include 'header.php';
         <?php endif; ?>
 
         <form class="profile-form" method="post" action="profile.php">
+            <?= csrf_field('customer_profile') ?>
             <input type="hidden" name="update_profile" value="1">
             <div class="profile-grid">
                 <div class="profile-form-group">
