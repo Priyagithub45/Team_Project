@@ -2712,3 +2712,820 @@ textarea:focus-visible {
   color: #64748b;
   margin-bottom: 16px;
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROFILE V2 — Unified two-column redesign
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Override form-page centering for the new layout */
+.main-wrap.profile-v2-wrap {
+  display: block !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  padding: 24px 28px 80px !important;
+  max-width: none !important;
+}
+
+/* ── Hero banner ─────────────────────────────────────────────────────────── */
+.profile-v2-hero {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #1C2B41 0%, #162336 55%, #0e1820 100%);
+  border-radius: 14px;
+  border-left: 4px solid var(--orange);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #fff;
+  animation: traderfadeUp 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.profile-v2-hero-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22);
+  /* fixed block keeps images from dictating row height */
+  display: block;
+  position: relative;
+}
+
+.profile-v2-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-v2-hero-letter {
+  /* fills the 88×88 wrapper — no redundant explicit size */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--orange) 0%, #f97316 100%);
+  border-radius: 14px;
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0;
+}
+
+.profile-v2-hero-info {
+  min-width: 0;
+}
+
+.profile-v2-hero-name {
+  margin: 4px 0 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-v2-hero-sub {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-v2-hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.profile-v2-badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.profile-v2-shop-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 68px;
+  padding: 10px 18px;
+  background: rgba(237, 92, 43, 0.14);
+  border: 1px solid rgba(237, 92, 43, 0.32);
+  border-radius: 10px;
+  gap: 2px;
+}
+
+.profile-v2-shop-pill strong {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--orange), #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.profile-v2-shop-pill span {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Alert strip ─────────────────────────────────────────────────────────── */
+.profile-v2-alert {
+  margin-bottom: 20px;
+}
+
+/* ── Two-column layout ───────────────────────────────────────────────────── */
+.profile-v2-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+/* ── Personal column ─────────────────────────────────────────────────────── */
+.profile-v2-personal-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: sticky;
+  top: 56px; /* height of .header */
+}
+
+/* ── Card base ───────────────────────────────────────────────────────────── */
+.profile-v2-card {
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow:
+    0 2px 6px rgba(28, 43, 65, 0.04),
+    0 10px 28px rgba(28, 43, 65, 0.07);
+  animation: traderfadeUp 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 80ms;
+}
+
+.profile-v2-card-header {
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.profile-v2-card-header h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1c2b41;
+  letter-spacing: -0.2px;
+}
+
+.profile-v2-card .field {
+  margin-bottom: 14px;
+}
+
+.profile-v2-save-btn {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+  min-height: 44px;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+/* ── Locked card ─────────────────────────────────────────────────────────── */
+.profile-v2-locked-card {
+  background: #f8f6f2;
+  border-color: #e8e4de;
+  animation-delay: 140ms;
+}
+
+.profile-v2-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.profile-v2-info-cell {
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.profile-v2-info-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(28, 43, 65, 0.1);
+}
+
+.profile-v2-info-cell span {
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-v2-info-cell strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1c2b41;
+}
+
+/* ── Shops column ────────────────────────────────────────────────────────── */
+.profile-v2-shops-col {
+  min-width: 0;
+}
+
+.profile-v2-shops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 22px;
+}
+
+/* ── Shop card ───────────────────────────────────────────────────────────── */
+.profile-v2-shop-card {
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 2px 6px rgba(28, 43, 65, 0.04),
+    0 10px 28px rgba(28, 43, 65, 0.07);
+  transition: box-shadow 220ms ease, transform 220ms ease, border-color 220ms ease;
+  animation: traderfadeUp 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 120ms;
+}
+
+.profile-v2-shop-card:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.profile-v2-shop-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(237, 92, 43, 0.22);
+  box-shadow:
+    0 4px 14px rgba(28, 43, 65, 0.08),
+    0 20px 48px rgba(28, 43, 65, 0.12);
+}
+
+/* Shop card — dark header */
+.profile-v2-shop-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, #1c2b41 0%, #162336 60%, #0f1d2e 100%);
+  border-bottom: 2px solid rgba(237, 92, 43, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-v2-shop-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top right, rgba(237,92,43,0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.profile-v2-shop-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.profile-v2-shop-letter {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--orange) 0%, #f97316 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(237, 92, 43, 0.35);
+  position: relative;
+}
+
+.profile-v2-shop-title {
+  margin: 5px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+
+/* Shop form body */
+.profile-v2-shop-form {
+  padding: 22px 24px 0;
+}
+
+.profile-v2-shop-form .field {
+  margin-bottom: 14px;
+}
+
+.profile-v2-shop-form .form-row {
+  margin-bottom: 0;
+}
+
+/* Shop card footer / save strip */
+.profile-v2-shop-footer {
+  padding: 20px 24px 24px;
+  margin-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.profile-v2-shop-footer .btn {
+  width: 100%;
+  text-align: center;
+  min-height: 44px;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+/* ── Current image preview ───────────────────────────────────────────────── */
+.profile-v2-current-img {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  background: #f8f6f2;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.profile-v2-current-img img {
+  width: 40px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.profile-v2-current-img span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .profile-v2-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .profile-v2-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-v2-personal-col {
+    position: static;
+  }
+
+  .profile-v2-info-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .main-wrap.profile-v2-wrap {
+    padding: 14px 14px 60px !important;
+  }
+
+  .profile-v2-hero {
+    grid-template-columns: 64px minmax(0, 1fr);
+    padding: 18px 20px;
+    gap: 16px;
+  }
+
+  .profile-v2-hero-letter,
+  .profile-v2-hero-avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .profile-v2-hero-letter {
+    font-size: 26px;
+  }
+
+  .profile-v2-hero-name {
+    font-size: 20px;
+  }
+
+  .profile-v2-hero-meta {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .profile-v2-shops-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .profile-v2-hero {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .profile-v2-hero-letter,
+  .profile-v2-hero-avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .profile-v2-hero-letter {
+    font-size: 22px;
+  }
+
+  .profile-v2-info-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-v2-shop-form .form-row {
+    flex-direction: column;
+  }
+}
+
+/* Profile polish overrides */
+.main-wrap.profile-v2-wrap {
+  padding: 24px clamp(18px, 3vw, 34px) 96px !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.66), rgba(255,255,255,0)),
+    var(--light);
+}
+
+.profile-v2-hero {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 20px 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-left: 4px solid var(--orange);
+  background:
+    linear-gradient(135deg, #172437 0%, #1c2b41 56%, #22384a 100%);
+  box-shadow: 0 18px 44px rgba(28,43,65,0.16);
+}
+
+.profile-v2-hero-avatar,
+.profile-v2-hero-letter {
+  width: 48px;
+  height: 48px;
+  max-width: 48px;
+  max-height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profile-v2-hero-img,
+.profile-v2-hero-avatar img {
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+.profile-v2-hero-avatar {
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.profile-v2-hero-name {
+  font-size: clamp(22px, 2vw, 30px);
+  letter-spacing: 0;
+}
+
+.profile-v2-hero-sub {
+  max-width: 720px;
+  color: rgba(255,255,255,0.74);
+}
+
+.profile-v2-hero .status-box {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.16);
+}
+
+.profile-v2-shop-pill {
+  min-width: 76px;
+  border-radius: 8px;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.14);
+}
+
+.profile-v2-shop-pill strong {
+  color: var(--orange);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.profile-v2-shop-pill span {
+  color: #64748b;
+}
+
+.profile-v2-layout {
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.profile-v2-personal-col {
+  top: 74px;
+}
+
+.profile-v2-card,
+.profile-v2-shop-card {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 28px rgba(28,43,65,0.07);
+}
+
+.profile-v2-card {
+  padding: 22px;
+}
+
+.profile-v2-card-header {
+  margin-bottom: 18px;
+}
+
+.profile-v2-locked-card {
+  background: #fff;
+}
+
+.profile-v2-info-grid {
+  gap: 0;
+  border: 1px solid #edf0f4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profile-v2-info-cell {
+  border: 0;
+  border-radius: 0;
+  border-right: 1px solid #edf0f4;
+  border-bottom: 1px solid #edf0f4;
+  box-shadow: none;
+}
+
+.profile-v2-info-cell:nth-child(2n) {
+  border-right: 0;
+}
+
+.profile-v2-info-cell:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.profile-v2-info-cell:hover {
+  transform: none;
+  box-shadow: none;
+  background: #fbfaf7;
+}
+
+.profile-v2-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 14px;
+}
+
+.profile-v2-section-head h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.profile-v2-section-head .apply-eyebrow {
+  margin-bottom: 4px;
+}
+
+.profile-v2-section-head > span {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.profile-v2-shops-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr));
+  gap: 20px;
+}
+
+.profile-v2-shop-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-v2-shop-header {
+  gap: 16px;
+  padding: 20px 22px;
+  background: #1c2b41;
+  border-bottom: 3px solid var(--orange);
+}
+
+.profile-v2-shop-header::before {
+  display: none;
+}
+
+.profile-v2-shop-thumb,
+.profile-v2-shop-letter {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 6px;
+}
+
+.profile-v2-shop-letter {
+  background: var(--orange);
+  box-shadow: none;
+}
+
+.profile-v2-shop-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(255,255,255,0.62);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.profile-v2-shop-title {
+  font-size: 19px;
+  letter-spacing: 0;
+}
+
+.profile-v2-shop-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 20px 22px 0;
+}
+
+.profile-v2-shop-form .form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(150px, 0.65fr);
+  gap: 14px;
+}
+
+.profile-v2-shop-form .field {
+  margin-bottom: 15px;
+}
+
+.profile-v2-shop-footer {
+  margin-top: auto;
+  padding: 18px 22px 22px;
+  background: #fbfaf7;
+}
+
+.profile-v2-current-img {
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.profile-v2-current-img img {
+  width: 96px !important;
+  height: 64px !important;
+  max-width: 96px !important;
+  max-height: 64px !important;
+  border-radius: 6px;
+  object-fit: cover !important;
+}
+
+.profile-v2-save-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 1180px) {
+  .profile-v2-layout {
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .profile-v2-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-v2-personal-col {
+    position: static;
+  }
+
+  .profile-v2-info-cell:nth-child(n) {
+    border-right: 1px solid #edf0f4;
+    border-bottom: 1px solid #edf0f4;
+  }
+
+  .profile-v2-info-cell:nth-child(4n) {
+    border-right: 0;
+  }
+
+  .profile-v2-info-cell:nth-last-child(-n + 4) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .main-wrap.profile-v2-wrap {
+    padding: 16px 14px 72px !important;
+  }
+
+  .profile-v2-hero {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .profile-v2-hero-avatar,
+  .profile-v2-hero-letter {
+    width: 40px;
+    height: 40px;
+  }
+
+  .profile-v2-hero-meta {
+    grid-column: 1 / -1;
+    align-items: stretch;
+  }
+
+  .profile-v2-badge-row {
+    justify-content: flex-start;
+  }
+
+  .profile-v2-shop-pill {
+    align-items: flex-start;
+    width: fit-content;
+  }
+}
+
+@media (max-width: 620px) {
+  .profile-v2-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .profile-v2-info-grid,
+  .profile-v2-shop-form .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-v2-info-cell:nth-child(n) {
+    border-right: 0;
+    border-bottom: 1px solid #edf0f4;
+  }
+
+  .profile-v2-info-cell:last-child {
+    border-bottom: 0;
+  }
+}

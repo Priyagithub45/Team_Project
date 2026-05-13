@@ -142,3 +142,49 @@ function trader_fetch_profile($conn, int $trader_id, ?int $shop_id = null): ?arr
 
     return $profile;
 }
+
+function trader_fetch_all_shop_profiles($conn, int $trader_id): array
+{
+    $description_select = trader_shop_description_column_exists($conn)
+        ? ', s.DESCRIPTION AS SHOP_DESCRIPTION'
+        : ", NULL AS SHOP_DESCRIPTION";
+    $image_select = trader_shop_image_column_exists($conn)
+        ? ', s.IMAGE_PATH AS SHOP_IMAGE_PATH'
+        : ", NULL AS SHOP_IMAGE_PATH";
+
+    $sql = "SELECT su.USER_ID,
+                   su.NAME,
+                   su.EMAIL,
+                   su.PHONE_NO,
+                   su.ADDRESS,
+                   su.STATUS AS USER_STATUS,
+                   t.BUSINESS_NAME,
+                   t.STATUS AS TRADER_STATUS,
+                   s.SHOP_ID,
+                   s.SHOP_NAME,
+                   s.LOCATION AS SHOP_LOCATION,
+                   s.CONTACT_NO AS SHOP_CONTACT_NO
+                   {$description_select}
+                   {$image_select}
+            FROM SYSTEM_USER su
+            JOIN TRADER t ON t.USER_ID = su.USER_ID
+            LEFT JOIN SHOP s ON s.TRADER_ID = t.USER_ID
+            WHERE su.USER_ID = :trader_id
+            ORDER BY s.SHOP_ID";
+
+    $stmt = oci_parse($conn, $sql);
+    if (!$stmt) {
+        return [];
+    }
+    oci_bind_by_name($stmt, ':trader_id', $trader_id);
+    if (!oci_execute($stmt)) {
+        oci_free_statement($stmt);
+        return [];
+    }
+    $rows = [];
+    while ($row = oci_fetch_assoc($stmt)) {
+        $rows[] = $row;
+    }
+    oci_free_statement($stmt);
+    return $rows;
+}
