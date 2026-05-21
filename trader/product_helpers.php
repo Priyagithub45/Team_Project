@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../product_discount_helpers.php';
+
 function trader_product_status_column_exists($conn): bool
 {
     static $exists = null;
@@ -54,6 +56,33 @@ function trader_product_image_column_exists($conn): bool
 
     $exists = ((int)($row['CNT'] ?? 0) > 0);
     return $exists;
+}
+
+function trader_discount_tables_available($conn): bool
+{
+    static $available = null;
+
+    if ($available !== null) {
+        return $available;
+    }
+
+    $stmt = oci_parse(
+        $conn,
+        "SELECT COUNT(*) AS CNT
+         FROM USER_TABLES
+         WHERE TABLE_NAME IN ('DISCOUNT', 'PRODUCT_DISCOUNT')"
+    );
+
+    if (!$stmt || !oci_execute($stmt)) {
+        $available = false;
+        return $available;
+    }
+
+    $row = oci_fetch_assoc($stmt);
+    oci_free_statement($stmt);
+
+    $available = ((int)($row['CNT'] ?? 0) === 2);
+    return $available;
 }
 
 function trader_current_shop($conn, int $trader_id): ?array
@@ -477,6 +506,7 @@ function trader_validate_product_input(): array
         'max_order' => trader_clean_string('max_order'),
         'allergy_info' => trader_clean_string('allergy_info'),
         'category_id' => trader_clean_string('category_id'),
+        'discount_rate' => trader_clean_string('discount_rate'),
         'status' => strtoupper(trader_clean_string('status') ?: 'ACTIVE'),
     ];
 
@@ -495,6 +525,13 @@ function trader_validate_product_input(): array
     $price = filter_var($data['price'], FILTER_VALIDATE_FLOAT);
     if ($price === false || $price <= 0) {
         $errors['price'] = 'Price must be greater than 0.';
+    }
+
+    $discount_rate = $data['discount_rate'] === ''
+        ? 0.0
+        : filter_var($data['discount_rate'], FILTER_VALIDATE_FLOAT);
+    if ($discount_rate === false || $discount_rate < 0 || $discount_rate >= 100) {
+        $errors['discount_rate'] = 'Discount must be between 0 and 99.99%.';
     }
 
     $stock = filter_var($data['stock_quantity'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
@@ -537,6 +574,7 @@ function trader_validate_product_input(): array
     }
 
     $data['price'] = $price === false ? null : round((float)$price, 2);
+    $data['discount_rate'] = $discount_rate === false ? 0.0 : round((float)$discount_rate, 2);
     $data['stock_quantity'] = $stock === false ? null : (int)$stock;
     $data['category_id'] = $category_id === false ? null : (int)$category_id;
     $data['quantity_per_item'] = $quantity_per_item;
@@ -546,15 +584,98 @@ function trader_validate_product_input(): array
     return [$data, $errors];
 }
 
+function trader_apply_product_discount($conn, int $product_id, float $discount_rate, string $product_name): bool
+{
+    if (!trader_discount_tables_available($conn)) {
+        return true;
+    }
+
+    $delete = oci_parse($conn, 'DELETE FROM PRODUCT_DISCOUNT WHERE PRODUCT_ID = :product_id');
+    if (!$delete) {
+        return false;
+    }
+    oci_bind_by_name($delete, ':product_id', $product_id);
+    if (!oci_execute($delete, OCI_NO_AUTO_COMMIT)) {
+        oci_free_statement($delete);
+        return false;
+    }
+    oci_free_statement($delete);
+
+    if ($discount_rate <= 0) {
+        return true;
+    }
+
+    $lock = oci_parse($conn, 'LOCK TABLE DISCOUNT IN EXCLUSIVE MODE');
+    if (!$lock || !oci_execute($lock, OCI_NO_AUTO_COMMIT)) {
+        if ($lock) {
+            oci_free_statement($lock);
+        }
+        return false;
+    }
+    oci_free_statement($lock);
+
+    $seq = oci_parse($conn, 'SELECT NVL(MAX(DISCOUNT_ID), 0) + 1 AS DISCOUNT_ID FROM DISCOUNT');
+    if (!$seq || !oci_execute($seq, OCI_NO_AUTO_COMMIT)) {
+        if ($seq) {
+            oci_free_statement($seq);
+        }
+        return false;
+    }
+    $row = oci_fetch_assoc($seq);
+    oci_free_statement($seq);
+
+    $discount_id = (int)($row['DISCOUNT_ID'] ?? 0);
+    if ($discount_id < 1) {
+        return false;
+    }
+
+    $discount_name = substr(trim($product_name) . ' trader discount', 0, 100);
+    $insert_discount = oci_parse(
+        $conn,
+        "INSERT INTO DISCOUNT (DISCOUNT_ID, DISCOUNT_NAME, DISCOUNT_RATE, START_DATE, END_DATE)
+         VALUES (:discount_id, :discount_name, :discount_rate, SYSDATE, NULL)"
+    );
+    if (!$insert_discount) {
+        return false;
+    }
+    oci_bind_by_name($insert_discount, ':discount_id', $discount_id);
+    oci_bind_by_name($insert_discount, ':discount_name', $discount_name);
+    oci_bind_by_name($insert_discount, ':discount_rate', $discount_rate);
+    if (!oci_execute($insert_discount, OCI_NO_AUTO_COMMIT)) {
+        oci_free_statement($insert_discount);
+        return false;
+    }
+    oci_free_statement($insert_discount);
+
+    $link = oci_parse(
+        $conn,
+        'INSERT INTO PRODUCT_DISCOUNT (PRODUCT_ID, DISCOUNT_ID) VALUES (:product_id, :discount_id)'
+    );
+    if (!$link) {
+        return false;
+    }
+    oci_bind_by_name($link, ':product_id', $product_id);
+    oci_bind_by_name($link, ':discount_id', $discount_id);
+    if (!oci_execute($link, OCI_NO_AUTO_COMMIT)) {
+        oci_free_statement($link);
+        return false;
+    }
+    oci_free_statement($link);
+
+    return true;
+}
+
 function trader_fetch_owned_product($conn, int $product_id, int $trader_id): ?array
 {
     $status_select = trader_product_status_column_exists($conn) ? ", NVL(p.STATUS, 'ACTIVE') AS STATUS" : ", 'ACTIVE' AS STATUS";
     $image_select = trader_product_image_column_exists($conn) ? ", p.IMAGE_PATH" : ", NULL AS IMAGE_PATH";
+    $discount_select = trader_discount_tables_available($conn) ? cfo_discount_select_sql('p') : ", 0 AS DISCOUNT_RATE, p.PRICE AS DISCOUNTED_PRICE";
     $sql = "
         SELECT p.PRODUCT_ID,
                p.PRODUCT_NAME,
                p.DESCRIPTION,
-               p.PRICE,
+               p.PRICE
+               {$discount_select},
                p.STOCK_QUANTITY,
                TO_CHAR(p.EXPIRY_DATE, 'YYYY-MM-DD') AS EXPIRY_DATE,
                p.CATEGORY_ID,

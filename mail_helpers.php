@@ -78,6 +78,69 @@ function cfo_send_html_mail(string $to, string $subject, string $html_body, stri
     return true;
 }
 
+function cfo_is_local_request(): bool
+{
+    $server_name = strtolower((string)($_SERVER['SERVER_NAME'] ?? ''));
+    $http_host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+    $remote_addr = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+
+    return in_array($server_name, ['localhost', '127.0.0.1', '::1'], true)
+        || str_starts_with($http_host, 'localhost')
+        || in_array($remote_addr, ['127.0.0.1', '::1'], true);
+}
+
+function cfo_write_local_mail_preview(string $to, string $subject, string $text_body): bool
+{
+    $log_dir = __DIR__ . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
+    if (!is_dir($log_dir) && !mkdir($log_dir, 0775, true) && !is_dir($log_dir)) {
+        error_log('[MAIL LOCAL PREVIEW] Could not create log directory: ' . $log_dir);
+        return false;
+    }
+
+    $entry = '[' . date('Y-m-d H:i:s') . "]\n"
+        . 'To: ' . $to . "\n"
+        . 'Subject: ' . $subject . "\n\n"
+        . $text_body . "\n"
+        . str_repeat('-', 72) . "\n";
+
+    $path = $log_dir . DIRECTORY_SEPARATOR . 'mail_preview.log';
+    if (file_put_contents($path, $entry, FILE_APPEND | LOCK_EX) === false) {
+        error_log('[MAIL LOCAL PREVIEW] Could not write preview log: ' . $path);
+        return false;
+    }
+
+    return true;
+}
+
+function send_customer_registration_otp_email(string $recipient, string $customer_name, string $otp): bool
+{
+    $subject = 'Your Cleckhuddesfax Online Mart verification code';
+    $safe_name = cfo_mail_escape($customer_name);
+    $safe_otp = cfo_mail_escape($otp);
+
+    $html = '<!doctype html><html><body style="margin:0;background:#f8f6f2;font-family:Arial,sans-serif;color:#1c2b41;">'
+        . '<div style="max-width:620px;margin:0 auto;padding:24px;">'
+        . '<div style="background:#1c2b41;color:#fff;padding:24px;border-bottom:4px solid #ed5c2b;">'
+        . '<h1 style="margin:0;font-size:24px;">Verify your email</h1>'
+        . '</div>'
+        . '<div style="background:#fff;padding:24px;border:1px solid #e5e7eb;">'
+        . '<p>Hello ' . $safe_name . ',</p>'
+        . '<p>Use this one-time code to finish creating your Cleckhuddesfax Online Mart account:</p>'
+        . '<div style="font-size:32px;letter-spacing:8px;font-weight:bold;background:#f3f4f6;border:1px solid #e5e7eb;padding:16px;text-align:center;margin:18px 0;">' . $safe_otp . '</div>'
+        . '<p>This code expires in 10 minutes.</p>'
+        . '<p style="font-size:12px;color:#6b7280;">If you did not request this registration, you can ignore this email.</p>'
+        . '</div>'
+        . '</div></body></html>';
+
+    $text = "Verify your email\n\n"
+        . "Hello {$customer_name},\n\n"
+        . "Your Cleckhuddesfax Online Mart OTP is: {$otp}\n"
+        . "This code expires in 10 minutes.\n\n"
+        . "If you did not request this registration, please ignore this email.";
+
+    return cfo_send_html_mail($recipient, $subject, $html, $text);
+}
+
 function cfo_fetch_order_mail_data($conn, int $order_id): ?array
 {
     $sql_order = "SELECT o.ORDER_ID,

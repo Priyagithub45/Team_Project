@@ -10,6 +10,7 @@
             <a href="#">TERMS OF SERVICE</a>
             <a href="#">COOKIE SETTINGS</a>
             <a href="../customer/contact.php">CONTACT</a>
+            <a href="../customer/faq.php">FAQ</a>
         </div>
         <div class="footer-copy">
             &copy; 2026 CLECKHUDDESFAX ONLINE MART

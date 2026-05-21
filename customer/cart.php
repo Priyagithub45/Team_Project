@@ -70,7 +70,8 @@ if ($is_logged_in) {
         }
         $in_clause = implode(',', $placeholders);
 
-        $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE, p.STOCK_QUANTITY,
+        $effective_price_sql = cfo_effective_price_sql('p');
+        $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, {$effective_price_sql} AS PRICE, p.STOCK_QUANTITY,
                        p.MIN_ORDER, p.MAX_ORDER {$image_select},
                        s.SHOP_ID, s.SHOP_NAME
                 FROM PRODUCT p

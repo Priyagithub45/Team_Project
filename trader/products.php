@@ -16,12 +16,14 @@ $shop_name = trader_shop_context_label($shop_context, 'All shops');
 $account_name = trader_account_label($current_trader);
 $status_select = $has_status ? ", NVL(p.STATUS, 'ACTIVE') AS STATUS" : ", 'ACTIVE' AS STATUS";
 $image_select = $has_image ? ", p.IMAGE_PATH" : ", NULL AS IMAGE_PATH";
+$discount_select = trader_discount_tables_available($conn) ? cfo_discount_select_sql('p') : ", 0 AS DISCOUNT_RATE, p.PRICE AS DISCOUNTED_PRICE";
 $status_filter = $has_status ? "AND NVL(UPPER(p.STATUS), 'ACTIVE') <> 'DISCONTINUED'" : '';
 
 $sql = "
     SELECT p.PRODUCT_ID,
            p.PRODUCT_NAME,
-           p.PRICE,
+           p.PRICE
+           {$discount_select},
            NVL(p.STOCK_QUANTITY, 0) AS STOCK_QUANTITY,
            c.CATEGORY_NAME,
            s.SHOP_NAME
@@ -119,6 +121,7 @@ function product_stock_class(int $stock): string
     <a href="reports_daily.php">Daily Orders</a>
     <a href="reports_weekly_finance.php">Weekly Finance</a>
     <a href="reports_monthly_sales.php">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php">Profile</a>
   </nav>
   <?php trader_render_shop_switcher($shop_context); ?>
@@ -165,6 +168,7 @@ function product_stock_class(int $stock): string
               <th>Shop</th>
               <th>Category</th>
               <th>Price</th>
+              <th>Discount</th>
               <th>Stock</th>
               <th>Status</th>
               <th>Actions</th>
@@ -176,6 +180,8 @@ function product_stock_class(int $stock): string
                 $stock = (int)$product['STOCK_QUANTITY'];
                 $image_src = product_image_src_for_trader($product);
                 $status = strtoupper((string)($product['STATUS'] ?? 'ACTIVE'));
+                $discount_rate = cfo_discount_rate_from_row($product);
+                $discounted_price = cfo_effective_price_from_row($product);
               ?>
               <tr>
                 <td>
@@ -190,7 +196,23 @@ function product_stock_class(int $stock): string
                 <td><?= h((string)$product['PRODUCT_NAME']) ?></td>
                 <td><?= h((string)($product['SHOP_NAME'] ?? '-')) ?></td>
                 <td><?= h((string)($product['CATEGORY_NAME'] ?? '-')) ?></td>
-                <td>GBP <?= h(number_format((float)$product['PRICE'], 2)) ?></td>
+                <td>
+                  <?php if ($discount_rate > 0): ?>
+                    <span class="price-stack">
+                      <span class="price-old">GBP <?= h(number_format((float)$product['PRICE'], 2)) ?></span>
+                      <strong>GBP <?= h(number_format($discounted_price, 2)) ?></strong>
+                    </span>
+                  <?php else: ?>
+                    GBP <?= h(number_format((float)$product['PRICE'], 2)) ?>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <?php if ($discount_rate > 0): ?>
+                    <span class="discount-pill"><?= h(cfo_format_discount_rate($discount_rate)) ?>% off</span>
+                  <?php else: ?>
+                    <span class="muted-cell">No discount</span>
+                  <?php endif; ?>
+                </td>
                 <td><?= h((string)$stock) ?></td>
                 <td>
                   <span class="status-box <?= h($status === 'ACTIVE' ? product_stock_class($stock) : 'status-low') ?>">

@@ -33,7 +33,8 @@ if (strtotime($start_date) > strtotime($end_date)) {
     [$start_date, $end_date] = [$end_date, $start_date];
 }
 
-$report_order_status_sql = "AND UPPER(NVL(o.STATUS, 'PENDING')) IN ('PAID', 'PREPARING', 'READY FOR COLLECTION', 'COLLECTED', 'COMPLETED')";
+$finance_status_label = 'Collected, Completed, or Delivered';
+$report_order_status_sql = "AND UPPER(NVL(o.STATUS, 'PENDING')) IN ('COLLECTED', 'COMPLETED', 'DELIVERED')";
 
 $summary_sql = "
     SELECT p.PRODUCT_ID,
@@ -69,7 +70,6 @@ oci_free_statement($stmt);
 
 $detail_sql = "
     SELECT o.ORDER_ID,
-           o.CUSTOMER_ID,
            TO_CHAR(o.ORDER_DATE, 'YYYY-MM-DD') AS ORDER_DATE,
            p.PRODUCT_NAME,
            oi.QUANTITY,
@@ -135,6 +135,7 @@ $account_name = trader_account_label($current_trader);
     <a href="reports_daily.php">Daily Orders</a>
     <a href="reports_weekly_finance.php" class="active">Weekly Finance</a>
     <a href="reports_monthly_sales.php">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php">Profile</a>
   </nav>
   <?php trader_render_shop_switcher($shop_context); ?>
@@ -150,7 +151,7 @@ $account_name = trader_account_label($current_trader);
     <div>
       <span class="apply-eyebrow">Trader Finance</span>
       <h1><?= h($shop_name) ?></h1>
-      <p>Revenue is calculated from your own shops only. Use the selector to split totals by shop.</p>
+      <p>Payable revenue is calculated from delivered collection orders only. Use the selector to split totals by shop.</p>
     </div>
     <div class="dashboard-hero-meta">
       <a href="reports_daily.php" class="btn btn-primary">Daily Orders</a>
@@ -171,26 +172,30 @@ $account_name = trader_account_label($current_trader);
     <a href="reports_weekly_finance.php" class="btn btn-ghost">Last 7 Days</a>
   </form>
 
+  <div class="report-policy-note">
+    Weekly finance only includes delivered orders with status <?= h($finance_status_label) ?>. Pending, Paid, Preparing, and Ready for Collection orders are excluded until collection is complete.
+  </div>
+
   <section class="dashboard-metrics report-metrics" aria-label="Weekly finance totals">
     <article class="metric-card">
-      <span>Gross Revenue</span>
+      <span>Payable Revenue</span>
       <strong><?= h(money_value($gross_revenue)) ?></strong>
-      <small>Sum of your product lines</small>
+      <small>Delivered orders only</small>
     </article>
     <article class="metric-card">
       <span>Orders</span>
       <strong><?= h((string)count($orders_seen)) ?></strong>
-      <small>Distinct paid orders</small>
+      <small>Distinct delivered orders</small>
     </article>
     <article class="metric-card">
       <span>Items Sold</span>
       <strong><?= h((string)$total_quantity) ?></strong>
-      <small>Total quantity sold</small>
+      <small>Delivered item quantity</small>
     </article>
     <article class="metric-card">
       <span>Products</span>
       <strong><?= h((string)count($summary_rows)) ?></strong>
-      <small>Products with sales</small>
+      <small>Products delivered</small>
     </article>
   </section>
 
@@ -204,7 +209,7 @@ $account_name = trader_account_label($current_trader);
       </div>
 
       <?php if (empty($summary_rows)): ?>
-        <div class="empty-state">No paid finance rows found for this date range.</div>
+        <div class="empty-state">No delivered finance rows found for this date range.</div>
       <?php else: ?>
         <div class="responsive-table">
           <table>
@@ -213,7 +218,7 @@ $account_name = trader_account_label($current_trader);
                 <th>Product</th>
                 <th>Orders</th>
                 <th>Quantity</th>
-                <th>Gross Revenue</th>
+                <th>Payable Revenue</th>
               </tr>
             </thead>
             <tbody>
@@ -247,11 +252,11 @@ $account_name = trader_account_label($current_trader);
             <article>
               <div>
                 <strong><?= h((string)$row['PRODUCT_NAME']) ?></strong>
-                <span>Order #<?= h((string)$row['ORDER_ID']) ?> - Customer #<?= h((string)$row['CUSTOMER_ID']) ?></span>
+                <span>Order #<?= h((string)$row['ORDER_ID']) ?></span>
               </div>
               <div>
                 <b><?= h(money_value($row['LINE_TOTAL'])) ?></b>
-                <span><?= h((string)$row['ORDER_DATE']) ?>, x<?= h((string)$row['QUANTITY']) ?></span>
+                <span><?= h((string)$row['ORDER_DATE']) ?>, x<?= h((string)$row['QUANTITY']) ?>, <?= h((string)$row['STATUS']) ?></span>
               </div>
             </article>
           <?php endforeach; ?>

@@ -81,6 +81,37 @@ function updateCartBadge(count) {
     }
 }
 
+function updateWishlistBadge(count) {
+    var badge = document.getElementById('wishlist-badge');
+    if (!badge) return;
+    count = parseInt(count, 10) || 0;
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.remove('cart-badge-hidden');
+        badge.style.display = '';
+        badge.classList.remove('cart-badge-pulse');
+        void badge.offsetWidth;
+        badge.classList.add('cart-badge-pulse');
+    } else {
+        badge.classList.add('cart-badge-hidden');
+        badge.style.display = 'none';
+    }
+}
+
+function setWishlistButtonState(btn, saved) {
+    var icon = btn.querySelector('.material-icons');
+    var label = btn.querySelector('.wishlist-label');
+    btn.classList.toggle('is-saved', !!saved);
+    btn.setAttribute('aria-label', saved ? 'Saved to wishlist' : 'Save to wishlist');
+    btn.setAttribute('title', saved ? 'Saved to wishlist' : 'Save to wishlist');
+    if (icon) {
+        icon.textContent = saved ? 'favorite' : 'favorite_border';
+    }
+    if (label) {
+        label.textContent = saved ? 'Saved' : 'Save';
+    }
+}
+
 // ── Slot selection ───────────────────────────────────────────────────────────
 function initSlotSelection() {
     var slotTabs = document.querySelectorAll('.slot-tab');
@@ -240,6 +271,61 @@ function initAjaxAddToCart() {
 }
 
 // ── UI polish (scroll effects, form submit feedback) ─────────────────────────
+function initAjaxWishlist() {
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-ajax-wishlist]');
+        if (!btn || btn.disabled) return;
+        var form = btn.closest('form');
+        if (!form) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        btn.disabled = true;
+
+        fetch(form.getAttribute('action') || 'toggle_wishlist.php', {
+            method:  'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body:    new FormData(form)
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                if (data.wishlist_count !== undefined) {
+                    updateWishlistBadge(data.wishlist_count);
+                }
+                if (data.wishlisted !== undefined) {
+                    setWishlistButtonState(btn, data.wishlisted);
+                }
+                CFO_TOAST.show(
+                    data.message || 'Wishlist updated.',
+                    'success',
+                    '<a href="wishlist.php" class="cfo-flash-link">View wishlist &rarr;</a>'
+                );
+
+                if (data.wishlisted === false && form.classList.contains('wishlist-remove-form')) {
+                    var card = form.closest('[data-wishlist-item]');
+                    if (card) {
+                        card.classList.add('wishlist-card-removing');
+                        setTimeout(function () { card.remove(); }, 220);
+                    }
+                }
+            } else if (data.login_required && data.login_url) {
+                CFO_TOAST.show(data.error || 'Please log in to use your wishlist.', 'error');
+                setTimeout(function () { window.location.href = data.login_url; }, 650);
+            } else {
+                CFO_TOAST.show(data.error || 'Could not update wishlist.', 'error');
+            }
+        })
+        .catch(function () {
+            CFO_TOAST.show('Network error â€” please try again.', 'error');
+        })
+        .finally(function () {
+            btn.disabled = false;
+        });
+    });
+}
+
 function initUiPolish() {
     document.body.classList.add('ui-enhanced');
 
@@ -280,7 +366,7 @@ function initUiPolish() {
     document.querySelectorAll('form').forEach(function (form) {
         form.addEventListener('submit', function (e) {
             var btn = form.querySelector('button[type="submit"]');
-            if (!btn || btn.hasAttribute('data-ajax-cart')) return;
+            if (!btn || btn.hasAttribute('data-ajax-cart') || btn.hasAttribute('data-ajax-wishlist')) return;
             btn.classList.add('is-submitting');
             btn.disabled = true;
         });
@@ -295,6 +381,7 @@ function initAll() {
     initStarRating();
     initHamburgerNav();
     initAjaxAddToCart();
+    initAjaxWishlist();
     initUiPolish();
     CFO_TOAST.initFromFlash();
 }

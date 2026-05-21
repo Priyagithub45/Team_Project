@@ -11,6 +11,7 @@
                 <a href="#">TERMS OF SERVICE</a>
                 <a href="#">COOKIE SETTINGS</a>
                 <a href="contact.php">CONTACT</a>
+                <a href="faq.php">FAQ</a>
             </div>
             <div class="footer-copy">
                 &copy; 2026 CLECKHUDDESFAX ONLINE MART
@@ -19,6 +20,6 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="assets/js/script.js?v=2.2"></script>
+    <script src="assets/js/script.js?v=2.3"></script>
 </body>
 </html>

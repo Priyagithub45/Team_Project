@@ -1,6 +1,7 @@
 <?php
 include '../db.php';
 include 'product_image_helper.php';
+require_once 'wishlist_helpers.php';
 
 function h(string $value): string
 {
@@ -179,6 +180,8 @@ if (!$shop) {
 
 $image_select = product_image_select($conn, 'p');
 $active_filter = product_active_filter($conn, 'p');
+$discount_select = cfo_discount_select_sql('p');
+$effective_price_sql = cfo_effective_price_sql('p');
 $sort = strtolower(trim((string)($_GET['sort'] ?? 'name')));
 $allowed_sorts = ['name', 'price_asc', 'price_desc', 'recent'];
 if (!in_array($sort, $allowed_sorts, true)) {
@@ -217,8 +220,8 @@ if ($allergy_friendly) {
 }
 
 $order_by = match ($sort) {
-    'price_asc' => 'p.PRICE ASC, p.PRODUCT_NAME ASC',
-    'price_desc' => 'p.PRICE DESC, p.PRODUCT_NAME ASC',
+    'price_asc' => $effective_price_sql . ' ASC, p.PRODUCT_NAME ASC',
+    'price_desc' => $effective_price_sql . ' DESC, p.PRODUCT_NAME ASC',
     'recent' => 'p.PRODUCT_ID DESC',
     default => 'p.PRODUCT_NAME ASC',
 };
@@ -238,7 +241,8 @@ oci_free_statement($all_product_stmt);
 
 $product_sql = "SELECT p.PRODUCT_ID,
                        p.PRODUCT_NAME,
-                       p.PRICE,
+                       p.PRICE
+                       {$discount_select},
                        p.STOCK_QUANTITY,
                        p.CATEGORY_ID,
                        s.SHOP_NAME,
@@ -263,6 +267,12 @@ while ($row = oci_fetch_assoc($product_stmt)) {
     $products[] = $row;
 }
 oci_free_statement($product_stmt);
+
+$current_customer_id = (isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer')
+    ? (int)$_SESSION['user_id']
+    : 0;
+$wishlist_product_ids = cfo_wishlist_product_ids($conn, $current_customer_id, array_column($products, 'PRODUCT_ID'));
+$wishlist_return_to = cfo_wishlist_current_url('shop.php?id=' . (int)$shop_id);
 
 $rating_sql = "SELECT NVL(ROUND(AVG(r.RATING), 1), 0) AS AVG_RATING,
                       COUNT(r.REVIEW_ID) AS REVIEW_COUNT
@@ -452,10 +462,19 @@ include 'header.php';
                     <div class="product-list-card">
                         <div class="product-list-img-box">
                             <?php render_product_image($p); ?>
+                            <?php cfo_render_wishlist_button((int)$p['PRODUCT_ID'], isset($wishlist_product_ids[(int)$p['PRODUCT_ID']]), $wishlist_return_to, 'icon'); ?>
                         </div>
                         <div class="product-list-info">
                             <span class="product-list-name"><?= h((string)$p['PRODUCT_NAME']) ?></span>
-                            <span class="product-list-price">GBP <?= number_format((float)$p['PRICE'], 2) ?></span>
+                            <?php if (cfo_product_has_discount($p)): ?>
+                                <span class="product-list-price has-discount">
+                                    <small><?= h(cfo_format_discount_rate(cfo_discount_rate_from_row($p))) ?>% off</small>
+                                    <strong>GBP <?= h(number_format(cfo_effective_price_from_row($p), 2)) ?></strong>
+                                    <span class="price-old">GBP <?= h(number_format((float)$p['PRICE'], 2)) ?></span>
+                                </span>
+                            <?php else: ?>
+                                <span class="product-list-price">GBP <?= number_format((float)$p['PRICE'], 2) ?></span>
+                            <?php endif; ?>
                         </div>
                         <a href="product.php?id=<?= (int)$p['PRODUCT_ID'] ?>" class="btn-view-product">
                             <span class="material-icons">visibility</span> VIEW PRODUCT

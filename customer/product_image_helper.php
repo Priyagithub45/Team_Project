@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../product_discount_helpers.php';
+
 function product_image_column_exists($conn): bool
 {
     static $exists = null;

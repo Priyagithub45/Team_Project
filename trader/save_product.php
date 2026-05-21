@@ -154,6 +154,17 @@ if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
     exit;
 }
 
+if (!trader_apply_product_discount($conn, $product_id, (float)$data['discount_rate'], $product_name)) {
+    error_log('[TRADER SAVE PRODUCT DISCOUNT] Could not apply discount for product_id=' . $product_id);
+    @unlink(dirname(__DIR__) . '/' . $upload['path']);
+    oci_rollback($conn);
+    oci_free_statement($stmt);
+    trader_product_errors_set(['Could not save the product discount. Please try again.']);
+    trader_old_set($_POST);
+    header('Location: add_product.php');
+    exit;
+}
+
 oci_commit($conn);
 oci_free_statement($stmt);
 

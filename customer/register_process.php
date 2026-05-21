@@ -6,6 +6,7 @@
  */
 
 include '../db.php';
+require_once '../mail_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: register.php');
@@ -67,19 +68,23 @@ if (!empty($errors)) {
 $otp = (string)random_int(100000, 999999);
 $otp_expires_at = time() + (10 * 60);
 
-$subject = 'Your Cleckhuddesfax Online Mart verification code';
-$message = "Hello $name,\n\n"
-         . "Your Cleckhuddesfax Online Mart OTP is: $otp\n\n"
-         . "This code will expire in 10 minutes.\n\n"
-         . "If you did not request this registration, please ignore this email.";
-$from_email = ini_get('sendmail_from') ?: 'no-reply@cleckhuddesfax.local';
-$headers = "From: $from_email\r\n"
-         . "Reply-To: $from_email\r\n"
-         . "X-Mailer: PHP/" . phpversion();
+$mail_sent = send_customer_registration_otp_email($email, $name, $otp);
+$local_preview_saved = false;
 
-if (!mail($email, $subject, $message, $headers)) {
+if (!$mail_sent && cfo_is_local_request()) {
+    $local_preview_saved = cfo_write_local_mail_preview(
+        $email,
+        'Your Cleckhuddesfax Online Mart verification code',
+        "Hello {$name},\n\n"
+            . "Your Cleckhuddesfax Online Mart OTP is: {$otp}\n\n"
+            . "This code expires in 10 minutes.\n\n"
+            . "If you did not request this registration, please ignore this email."
+    );
+}
+
+if (!$mail_sent && !$local_preview_saved) {
     $_SESSION['register_errors'] = [
-        '_general' => 'Could not send the OTP email. Please check the XAMPP email setup and try again.',
+        '_general' => 'Could not send the OTP email. Gmail SMTP rejected the message. Please check the XAMPP sendmail log and Gmail app-password setup, then try again.',
     ];
     $_SESSION['register_old'] = [
         'name' => $name,
@@ -100,7 +105,9 @@ $_SESSION['pending_registration'] = [
     'otp_hash' => password_hash($otp, PASSWORD_DEFAULT),
     'otp_expires_at' => $otp_expires_at,
 ];
-$_SESSION['otp_success'] = 'We sent a 6-digit OTP to ' . $email . '. Please verify it to finish registration.';
+$_SESSION['otp_success'] = $mail_sent
+    ? 'We sent a 6-digit OTP to ' . $email . '. Please verify it to finish registration.'
+    : 'Email delivery is blocked by the local SMTP setup. For XAMPP testing, the OTP was saved in storage/logs/mail_preview.log.';
 
 header('Location: verify_otp.php');
 exit;

@@ -9,6 +9,11 @@
  */
 
 require_once __DIR__ . '/../csrf.php';
+require_once __DIR__ . '/../order_payment_status.php';
+
+if (isset($conn)) {
+    cfo_sync_matured_collection_payments($conn);
+}
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'customer') {
     $guest_cart = $_SESSION['guest_cart'] ?? null;

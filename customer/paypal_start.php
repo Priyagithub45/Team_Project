@@ -6,6 +6,7 @@ include '../db.php';
 include 'auth_check.php';
 include 'paypal_config.php';
 require_once 'collection_slot_rules.php';
+require_once '../product_discount_helpers.php';
 
 $user_id = (string)(int)$_SESSION['user_id'];
 
@@ -25,7 +26,8 @@ if ($is_buy_now) {
     $product_id = (string)(int)$buy_now['product_id'];
     $quantity = (int)$buy_now['quantity'];
 
-    $stmt = oci_parse($conn, "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.PRICE,
+    $effective_price_sql = cfo_effective_price_sql('p');
+    $stmt = oci_parse($conn, "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, {$effective_price_sql} AS PRICE,
                                      p.STOCK_QUANTITY, p.MIN_ORDER, p.MAX_ORDER, s.SHOP_NAME
                               FROM PRODUCT p
                               JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID

@@ -54,7 +54,7 @@ $slot_order_expr = "CASE {$slot_time_expr}
     ELSE 9
 END";
 $slot_filter_sql = $selected_slot !== '' ? "AND {$slot_time_expr} = :selected_slot" : '';
-$report_order_status_sql = "AND UPPER(NVL(o.STATUS, 'PENDING')) IN ('PAID', 'PREPARING', 'READY FOR COLLECTION', 'COLLECTED', 'COMPLETED')";
+$report_order_status_sql = "AND UPPER(NVL(o.STATUS, 'PENDING')) IN ('PENDING', 'PAID', 'PREPARING', 'READY FOR COLLECTION', 'COLLECTED', 'COMPLETED')";
 
 $slot_sql = "
     SELECT DISTINCT cs.COLLECTION_TIME,
@@ -85,8 +85,6 @@ oci_free_statement($slot_stmt);
 
 $detail_sql = "
     SELECT o.ORDER_ID,
-           o.CUSTOMER_ID,
-           su.NAME AS CUSTOMER_NAME,
            p.PRODUCT_ID,
            p.PRODUCT_NAME,
            oi.QUANTITY,
@@ -101,7 +99,6 @@ $detail_sql = "
     JOIN PRODUCT p ON p.PRODUCT_ID = oi.PRODUCT_ID
     JOIN SHOP s ON s.SHOP_ID = p.SHOP_ID
     JOIN COLLECTION_SLOT cs ON cs.SLOT_ID = o.SLOT_ID
-    LEFT JOIN SYSTEM_USER su ON su.USER_ID = o.CUSTOMER_ID
     WHERE s.TRADER_ID = :trader_id
       {$shop_filter_sql}
       AND TRUNC(cs.COLLECTION_DATE) = TO_DATE(:selected_date, 'YYYY-MM-DD')
@@ -179,6 +176,7 @@ $total_orders = count($orders_seen);
     <a href="reports_daily.php" class="active">Daily Orders</a>
     <a href="reports_weekly_finance.php">Weekly Finance</a>
     <a href="reports_monthly_sales.php">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php">Profile</a>
   </nav>
   <?php trader_render_shop_switcher($shop_context); ?>
@@ -224,7 +222,7 @@ $total_orders = count($orders_seen);
     <article class="metric-card">
       <span>Orders</span>
       <strong><?= h((string)$total_orders) ?></strong>
-      <small>Distinct customer orders</small>
+      <small>Distinct orders</small>
     </article>
     <article class="metric-card">
       <span>Items</span>
@@ -313,15 +311,13 @@ $total_orders = count($orders_seen);
     </div>
 
     <?php if (empty($order_items)): ?>
-      <div class="empty-state">No paid collection items found for your shop.</div>
+      <div class="empty-state">No collection items found for your shop.</div>
     <?php else: ?>
       <div class="responsive-table">
         <table>
           <thead>
             <tr>
               <th>Order ID</th>
-              <th>Customer ID</th>
-              <th>Customer</th>
               <th>Product</th>
               <th>Quantity</th>
               <th>Date</th>
@@ -333,8 +329,6 @@ $total_orders = count($orders_seen);
             <?php foreach ($order_items as $item): ?>
               <tr>
                 <td>#<?= h((string)$item['ORDER_ID']) ?></td>
-                <td><?= h((string)$item['CUSTOMER_ID']) ?></td>
-                <td><?= h((string)($item['CUSTOMER_NAME'] ?? '-')) ?></td>
                 <td><?= h((string)$item['PRODUCT_NAME']) ?></td>
                 <td><strong><?= h((string)$item['QUANTITY']) ?></strong></td>
                 <td><?= h((string)$item['COLLECTION_DATE']) ?></td>
@@ -369,7 +363,7 @@ $total_orders = count($orders_seen);
             </div>
             <h3><?= h((string)$item['PRODUCT_NAME']) ?></h3>
             <dl>
-              <div><dt>Customer</dt><dd>#<?= h((string)$item['CUSTOMER_ID']) ?> <?= h((string)($item['CUSTOMER_NAME'] ?? '')) ?></dd></div>
+              <div><dt>Order</dt><dd>#<?= h((string)$item['ORDER_ID']) ?></dd></div>
               <div><dt>Slot</dt><dd><?= h((string)$item['COLLECTION_DATE']) ?>, <?= h(slot_label((string)$item['COLLECTION_TIME'])) ?></dd></div>
               <div><dt>Shop</dt><dd><?= h((string)$item['SHOP_NAME']) ?></dd></div>
             </dl>

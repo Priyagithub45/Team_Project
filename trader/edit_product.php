@@ -39,6 +39,7 @@ $data = array_merge([
     'allergy_info' => $product['ALLERGY_INFO'] ?? '',
     'category_id' => $product['CATEGORY_ID'] ?? '',
     'shop_id' => $product['SHOP_ID'] ?? '',
+    'discount_rate' => $product['DISCOUNT_RATE'] ?? '',
     'status' => $product['STATUS'] ?? 'ACTIVE',
 ], $old);
 ?>
@@ -64,6 +65,7 @@ $data = array_merge([
     <a href="reports_daily.php">Daily Orders</a>
     <a href="reports_weekly_finance.php">Weekly Finance</a>
     <a href="reports_monthly_sales.php">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php">Profile</a>
   </nav>
   <?php trader_render_shop_switcher($shop_context); ?>
@@ -146,6 +148,16 @@ $data = array_merge([
                  value="<?= h((string)$data['price']) ?>">
           <?php if (isset($errors['price'])): ?>
             <span class="field-error" id="err_price" role="alert"><?= h((string)$errors['price']) ?></span>
+          <?php endif; ?>
+        </div>
+        <div class="field<?= isset($errors['discount_rate']) ? ' has-error' : '' ?>">
+          <label for="discount_rate">Discount (%) <span class="field-optional">(optional)</span></label>
+          <input type="number" id="discount_rate" name="discount_rate" step="0.01" min="0" max="99.99"
+                 <?= isset($errors['discount_rate']) ? 'aria-invalid="true" aria-describedby="err_discount_rate"' : '' ?>
+                 value="<?= h((string)$data['discount_rate']) ?>">
+          <span class="field-note">Enter 0 or leave blank to remove the discount.</span>
+          <?php if (isset($errors['discount_rate'])): ?>
+            <span class="field-error" id="err_discount_rate" role="alert"><?= h((string)$errors['discount_rate']) ?></span>
           <?php endif; ?>
         </div>
         <div class="field<?= isset($errors['stock_quantity']) ? ' has-error' : '' ?>">

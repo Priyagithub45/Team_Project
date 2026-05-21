@@ -6,6 +6,7 @@ include '../db.php';
 include 'auth_check.php';
 require_once 'collection_slot_rules.php';
 require_once '../mail_helpers.php';
+require_once '../product_discount_helpers.php';
 
 $is_paypal_return = false;
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['paypal'] ?? '') === 'success') {
@@ -36,6 +37,7 @@ $slot_id = (string)(int)$_SESSION['selected_slot_id'];
 if ($is_paypal_return) {
     $method_id = !empty($_SESSION['paypal_method_id']) ? (string)(int)$_SESSION['paypal_method_id'] : null;
     $payment_status = 'Paid';
+    $order_status = 'Paid';
 } else {
     $payment_choice = strtolower(trim((string)($_POST['payment_choice'] ?? '')));
 
@@ -53,6 +55,7 @@ if ($is_paypal_return) {
 
     $method_id = null;
     $payment_status = 'Pending';
+    $order_status = 'Pending';
 }
 
 $is_buy_now = (($_SESSION['checkout_mode'] ?? 'cart') === 'buy_now') && !empty($_SESSION['buy_now_item']);
@@ -136,8 +139,9 @@ if ($is_buy_now) {
     $product_id = (string)(int)$buy_now['product_id'];
     $quantity = (int)$buy_now['quantity'];
 
-    $stmt = oci_parse($conn, "SELECT PRODUCT_ID, PRICE, STOCK_QUANTITY, MIN_ORDER, MAX_ORDER
-                              FROM PRODUCT
+    $effective_price_sql = cfo_effective_price_sql('p');
+    $stmt = oci_parse($conn, "SELECT PRODUCT_ID, {$effective_price_sql} AS PRICE, STOCK_QUANTITY, MIN_ORDER, MAX_ORDER
+                              FROM PRODUCT p
                               WHERE PRODUCT_ID = :p_pid
                               FOR UPDATE");
     oci_bind_by_name($stmt, ':p_pid', $product_id);
@@ -259,11 +263,12 @@ if (!$is_paypal_return) {
 // Create the order and return its generated id from Oracle.
 $order_id = null;
 $stmt = oci_parse($conn, "INSERT INTO ORDERS (ORDER_ID, CUSTOMER_ID, SLOT_ID, TOTAL_AMOUNT, ORDER_DATE, STATUS)
-                          VALUES (ORDER_SEQ.NEXTVAL, :p_uid, :p_sid, :p_total, SYSDATE, 'Paid')
+                          VALUES (ORDER_SEQ.NEXTVAL, :p_uid, :p_sid, :p_total, SYSDATE, :p_order_status)
                           RETURNING ORDER_ID INTO :p_oid");
 oci_bind_by_name($stmt, ':p_uid', $user_id);
 oci_bind_by_name($stmt, ':p_sid', $slot_id);
 oci_bind_by_name($stmt, ':p_total', $total_amount);
+oci_bind_by_name($stmt, ':p_order_status', $order_status);
 oci_bind_by_name($stmt, ':p_oid', $order_id, 40);
 execute_or_fail($conn, $stmt, 'Could not create your order.');
 oci_free_statement($stmt);
@@ -319,6 +324,16 @@ if ($method_id !== null) {
 }
 execute_or_fail($conn, $stmt, 'Could not record payment for your order.');
 oci_free_statement($stmt);
+
+if (strtoupper($payment_status) !== 'PAID') {
+    $stmt = oci_parse($conn, "UPDATE PAYMENT
+                              SET PAYMENT_DATE = NULL
+                              WHERE ORDER_ID = :p_oid
+                                AND UPPER(NVL(PAYMENT_STATUS, 'PENDING')) = 'PENDING'");
+    oci_bind_by_name($stmt, ':p_oid', $order_id);
+    execute_or_fail($conn, $stmt, 'Could not record payment for your order.');
+    oci_free_statement($stmt);
+}
 
 if (!$is_buy_now) {
     $stmt = oci_parse($conn, "UPDATE CART

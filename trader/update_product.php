@@ -133,9 +133,13 @@ if ($has_status) {
 oci_bind_by_name($stmt, ':product_id', $product_id);
 oci_bind_by_name($stmt, ':trader_id', $current_trader_id);
 
-if (!oci_execute($stmt)) {
+if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) {
     $err = oci_error($stmt);
     error_log('[TRADER UPDATE PRODUCT] ' . ($err['message'] ?? 'unknown error'));
+    if ($image_path !== null) {
+        @unlink(dirname(__DIR__) . '/' . $image_path);
+    }
+    oci_rollback($conn);
     oci_free_statement($stmt);
     trader_product_errors_set(['Could not update product. Please check the values and try again.']);
     trader_old_set($_POST);
@@ -147,8 +151,24 @@ $updated = oci_num_rows($stmt);
 oci_free_statement($stmt);
 
 if ($updated < 1) {
+    if ($image_path !== null) {
+        @unlink(dirname(__DIR__) . '/' . $image_path);
+    }
+    oci_rollback($conn);
     trader_flash_set('error', 'Product was not updated.');
 } else {
+    if (!trader_apply_product_discount($conn, (int)$product_id, (float)$data['discount_rate'], $product_name)) {
+        error_log('[TRADER UPDATE PRODUCT DISCOUNT] Could not apply discount for product_id=' . (int)$product_id);
+        if ($image_path !== null) {
+            @unlink(dirname(__DIR__) . '/' . $image_path);
+        }
+        oci_rollback($conn);
+        trader_product_errors_set(['Could not update the product discount. Please try again.']);
+        trader_old_set($_POST);
+        header('Location: edit_product.php?id=' . (int)$product_id);
+        exit;
+    }
+    oci_commit($conn);
     trader_flash_set('success', 'Product updated successfully.');
 }
 

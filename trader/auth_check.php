@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../csrf.php';
+require_once __DIR__ . '/../order_payment_status.php';
+
+cfo_sync_matured_collection_payments($conn);
 
 function trader_auth_redirect(string $message): void
 {

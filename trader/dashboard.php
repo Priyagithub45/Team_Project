@@ -177,7 +177,6 @@ $upcoming_rows = dashboard_rows($conn, "
     SELECT *
     FROM (
         SELECT o.ORDER_ID,
-               o.CUSTOMER_ID,
                p.PRODUCT_NAME,
                oi.QUANTITY,
                TO_CHAR(cs.COLLECTION_DATE, 'YYYY-MM-DD') AS COLLECTION_DATE,
@@ -311,6 +310,7 @@ function chart_label(string $value, int $max_length = 24): string
     <a href="reports_daily.php">Daily Orders</a>
     <a href="reports_weekly_finance.php">Weekly Finance</a>
     <a href="reports_monthly_sales.php">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php">Profile</a>
   </nav>
   <?php trader_render_shop_switcher($shop_context); ?>
@@ -345,6 +345,7 @@ function chart_label(string $value, int $max_length = 24): string
     <a href="reports_daily.php">Daily Report</a>
     <a href="reports_weekly_finance.php">Weekly Finance</a>
     <a href="reports_monthly_sales.php">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php">Edit Profile</a>
   </section>
 
@@ -527,7 +528,7 @@ function chart_label(string $value, int $max_length = 24): string
             <article class="collection-item">
               <div>
                 <strong><?= h((string)$order['PRODUCT_NAME']) ?></strong>
-                <span>Order #<?= h((string)$order['ORDER_ID']) ?> - Customer #<?= h((string)$order['CUSTOMER_ID']) ?></span>
+                <span>Order #<?= h((string)$order['ORDER_ID']) ?></span>
               </div>
               <div class="collection-meta">
                 <b>x<?= h((string)$order['QUANTITY']) ?></b>

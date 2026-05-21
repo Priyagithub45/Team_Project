@@ -204,6 +204,7 @@ $month_label = date('F Y', strtotime($selected_month . '-01'));
     <a href="reports_daily.php">Daily Orders</a>
     <a href="reports_weekly_finance.php">Weekly Finance</a>
     <a href="reports_monthly_sales.php" class="active">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php">Profile</a>
   </nav>
   <?php trader_render_shop_switcher($shop_context); ?>
@@ -253,7 +254,7 @@ $month_label = date('F Y', strtotime($selected_month . '-01'));
     <article class="metric-card">
       <span>Total Orders</span>
       <strong><?= h((string)$total_orders) ?></strong>
-      <small>Distinct customer orders</small>
+      <small>Distinct orders</small>
     </article>
     <article class="metric-card">
       <span>Quantity Sold</span>

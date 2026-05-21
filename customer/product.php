@@ -2,6 +2,7 @@
 include '../db.php';
 require_once '../csrf.php';
 include 'product_image_helper.php';
+require_once 'wishlist_helpers.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
@@ -23,10 +24,12 @@ if (!$id || $id < 1) {
 
 $image_select = product_image_select($conn, 'p');
 $active_filter = product_active_filter($conn, 'p');
+$discount_select = cfo_discount_select_sql('p');
 $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE,
                p.STOCK_QUANTITY, p.MIN_ORDER, p.MAX_ORDER, p.ALLERGY_INFO,
                p.QUANTITY_PER_ITEM
-               {$image_select},
+               {$image_select}
+               {$discount_select},
                s.SHOP_NAME, c.CATEGORY_NAME
         FROM PRODUCT p
         JOIN SHOP s ON p.SHOP_ID = s.SHOP_ID
@@ -53,6 +56,9 @@ $product_id = (string)(int)$row['PRODUCT_ID'];
 $current_user_id = (isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer')
     ? (string)(int)$_SESSION['user_id']
     : null;
+$wishlist_saved = $current_user_id !== null
+    ? cfo_wishlist_is_saved($conn, (int)$current_user_id, (int)$product_id)
+    : false;
 
 $reviews = [];
 $stmt = oci_parse($conn, "SELECT r.REVIEW_ID, r.RATING, r.COMMENT_TEXT, r.REVIEW_DATE,
@@ -110,6 +116,8 @@ if ($current_user_id !== null) {
 $stock_quantity = (int)$row['STOCK_QUANTITY'];
 $stock_label = $in_stock ? ($stock_quantity <= 5 ? 'Low stock' : 'In stock') : 'Out of stock';
 $stock_class = $in_stock ? ($stock_quantity <= 5 ? 'low' : 'available') : 'out';
+$discount_rate = cfo_discount_rate_from_row($row);
+$discounted_price = cfo_effective_price_from_row($row);
 $rating_text = $review_count > 0
     ? number_format($average_rating, 1) . ' from ' . $review_count . ' review' . ($review_count === 1 ? '' : 's')
     : 'No reviews yet';
@@ -187,7 +195,13 @@ if (!empty($_SESSION['review_error'])) {
             </div>
 
             <div class="product-price-row">
-                <span class="product-price">GBP <?php echo number_format((float)$row['PRICE'], 2); ?></span>
+                <?php if ($discount_rate > 0): ?>
+                    <span class="product-price price-sale">GBP <?php echo number_format($discounted_price, 2); ?></span>
+                    <span class="product-price-old">GBP <?php echo number_format((float)$row['PRICE'], 2); ?></span>
+                    <span class="product-discount-badge"><?php echo cfo_format_discount_rate($discount_rate); ?>% OFF</span>
+                <?php else: ?>
+                    <span class="product-price">GBP <?php echo number_format((float)$row['PRICE'], 2); ?></span>
+                <?php endif; ?>
             </div>
 
             <div class="product-purchase-card">
@@ -251,6 +265,9 @@ if (!empty($_SESSION['review_error'])) {
                         <?php endif; ?>
                     </div>
                 </form>
+                <div class="product-wishlist-row">
+                    <?php cfo_render_wishlist_button((int)$row['PRODUCT_ID'], $wishlist_saved, cfo_wishlist_current_url('product.php?id=' . (int)$row['PRODUCT_ID']), 'wide'); ?>
+                </div>
             </div>
 
             <div class="product-meta">

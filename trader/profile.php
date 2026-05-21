@@ -147,6 +147,7 @@ foreach ($shops_data as $sd) {
     <a href="reports_daily.php">Daily Orders</a>
     <a href="reports_weekly_finance.php">Weekly Finance</a>
     <a href="reports_monthly_sales.php">Monthly Sales</a>
+    <a href="reviews.php">Reviews</a>
     <a href="profile.php" class="active">Profile</a>
   </nav>
   <?php trader_render_shop_switcher($shop_context); ?>

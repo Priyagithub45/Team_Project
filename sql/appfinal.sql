@@ -9581,15 +9581,37 @@ wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(156367848496669748268)
 ,p_name=>'P23_SHOP_ID'
 ,p_source_data_type=>'NUMBER'
+,p_is_required=>true
 ,p_item_sequence=>70
 ,p_item_plug_id=>wwv_flow_imp.id(156367845778059748264)
 ,p_item_source_plug_id=>wwv_flow_imp.id(156367845778059748264)
+,p_use_cache_before_default=>'NO'
+,p_prompt=>'Shop'
 ,p_source=>'SHOP_ID'
 ,p_source_type=>'REGION_SOURCE_COLUMN'
-,p_display_as=>'NATIVE_HIDDEN'
+,p_display_as=>'NATIVE_SELECT_LIST'
+,p_lov=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'SELECT sh.shop_name AS display_value,',
+'       sh.shop_id   AS return_value',
+'FROM shop sh',
+'JOIN trader t',
+'    ON t.user_id = sh.trader_id',
+'JOIN system_user su',
+'    ON su.user_id = t.user_id',
+'WHERE sh.trader_id = :P23_TRADER_ID',
+'  AND UPPER(t.status) = ''ACTIVE''',
+'  AND (LOWER(:APP_USER) = ''admin@gmail.com''',
+'       OR LOWER(su.email) = LOWER(:APP_USER))',
+'ORDER BY sh.shop_name'))
+,p_lov_display_null=>'NO'
+,p_cHeight=>1
+,p_field_template=>1609121967514267634
+,p_item_template_options=>'#DEFAULT#'
 ,p_is_persistent=>'N'
+,p_lov_display_extra=>'NO'
 ,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
-  'value_protected', 'Y')).to_clob
+  'execute_validations', 'Y',
+  'page_action_on_selection', 'NONE')).to_clob
 );
 wwv_flow_imp_page.create_page_item(
  p_id=>wwv_flow_imp.id(156367848824240748269)
@@ -9730,6 +9752,34 @@ wwv_flow_imp_page.create_page_validation(
 ,p_error_message=>'Min Order must be less than or equal to Max Order'
 ,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
 );
+wwv_flow_imp_page.create_page_validation(
+ p_id=>wwv_flow_imp.id(165711226234196675351)
+,p_validation_name=>'Shop Belongs To Trader'
+,p_validation_sequence=>40
+,p_validation=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'DECLARE',
+'    l_count NUMBER;',
+'BEGIN',
+'    SELECT COUNT(*)',
+'    INTO l_count',
+'    FROM shop sh',
+'    JOIN trader t',
+'        ON t.user_id = sh.trader_id',
+'    JOIN system_user su',
+'        ON su.user_id = t.user_id',
+'    WHERE sh.shop_id = :P23_SHOP_ID',
+'      AND sh.trader_id = :P23_TRADER_ID',
+'      AND UPPER(t.status) = ''ACTIVE''',
+'      AND (LOWER(:APP_USER) = ''admin@gmail.com''',
+'           OR LOWER(su.email) = LOWER(:APP_USER));',
+'',
+'    RETURN l_count = 1;',
+'END;'))
+,p_validation2=>'PLSQL'
+,p_validation_type=>'FUNC_BODY_RETURNING_BOOLEAN'
+,p_error_message=>'Select one of your active shops.'
+,p_error_display_location=>'INLINE_WITH_FIELD_AND_NOTIFICATION'
+);
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(156367858540523748279)
 ,p_process_sequence=>10
@@ -9760,13 +9810,54 @@ wwv_flow_imp_page.create_page_process(
 ,p_process_type=>'NATIVE_PLSQL'
 ,p_process_name=>'New'
 ,p_process_sql_clob=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'DECLARE',
+'    l_trader_id trader.user_id%TYPE;',
 'BEGIN',
-'    SELECT su.user_id, sh.shop_id',
-'    INTO :P23_TRADER_ID, :P23_SHOP_ID',
-'    FROM system_user su',
-'    JOIN shop sh',
-'        ON sh.trader_id = su.user_id',
-'    WHERE LOWER(su.email) = LOWER(:APP_USER);',
+'    IF :P23_PRODUCT_ID IS NOT NULL AND :P23_SHOP_ID IS NOT NULL THEN',
+'        SELECT sh.trader_id',
+'        INTO l_trader_id',
+'        FROM shop sh',
+'        JOIN trader t',
+'            ON t.user_id = sh.trader_id',
+'        JOIN system_user su',
+'            ON su.user_id = t.user_id',
+'        WHERE sh.shop_id = :P23_SHOP_ID',
+'          AND UPPER(t.status) = ''ACTIVE''',
+'          AND (LOWER(:APP_USER) = ''admin@gmail.com''',
+'               OR LOWER(su.email) = LOWER(:APP_USER));',
+'    ELSIF :P23_TRADER_ID IS NOT NULL THEN',
+'        SELECT t.user_id',
+'        INTO l_trader_id',
+'        FROM trader t',
+'        JOIN system_user su',
+'            ON su.user_id = t.user_id',
+'        WHERE t.user_id = :P23_TRADER_ID',
+'          AND UPPER(t.status) = ''ACTIVE''',
+'          AND (LOWER(:APP_USER) = ''admin@gmail.com''',
+'               OR LOWER(su.email) = LOWER(:APP_USER));',
+'    ELSE',
+'        SELECT su.user_id',
+'        INTO l_trader_id',
+'        FROM system_user su',
+'        JOIN trader t',
+'            ON t.user_id = su.user_id',
+'        WHERE LOWER(su.email) = LOWER(:APP_USER)',
+'          AND UPPER(t.status) = ''ACTIVE''',
+'        FETCH FIRST 1 ROW ONLY;',
+'    END IF;',
+'',
+'    :P23_TRADER_ID := l_trader_id;',
+'',
+'    IF :P23_PRODUCT_ID IS NULL AND :P23_SHOP_ID IS NULL THEN',
+'        SELECT MIN(sh.shop_id)',
+'        INTO :P23_SHOP_ID',
+'        FROM shop sh',
+'        WHERE sh.trader_id = l_trader_id;',
+'    END IF;',
+'EXCEPTION',
+'    WHEN NO_DATA_FOUND THEN',
+'        :P23_TRADER_ID := NULL;',
+'        :P23_SHOP_ID := NULL;',
 'END;'))
 ,p_process_clob_language=>'PLSQL'
 ,p_internal_uid=>165711226134196675350

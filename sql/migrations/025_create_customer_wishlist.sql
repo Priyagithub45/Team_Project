@@ -1,0 +1,64 @@
+-- Customer wishlist support.
+-- A wishlist row connects one customer to one saved product.
+
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO v_count
+      FROM USER_TABLES
+     WHERE TABLE_NAME = 'WISHLIST';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE TABLE WISHLIST (
+                WISHLIST_ID NUMBER PRIMARY KEY,
+                CUSTOMER_ID NUMBER NOT NULL,
+                PRODUCT_ID NUMBER NOT NULL,
+                CREATED_AT DATE DEFAULT SYSDATE NOT NULL,
+                CONSTRAINT FK_WISHLIST_CUSTOMER FOREIGN KEY (CUSTOMER_ID)
+                    REFERENCES CUSTOMER(USER_ID),
+                CONSTRAINT FK_WISHLIST_PRODUCT FOREIGN KEY (PRODUCT_ID)
+                    REFERENCES PRODUCT(PRODUCT_ID),
+                CONSTRAINT UQ_WISHLIST_CUSTOMER_PRODUCT UNIQUE (CUSTOMER_ID, PRODUCT_ID)
+            )';
+    END IF;
+END;
+/
+
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO v_count
+      FROM USER_SEQUENCES
+     WHERE SEQUENCE_NAME = 'WISHLIST_SEQ';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE 'CREATE SEQUENCE WISHLIST_SEQ START WITH 1 INCREMENT BY 1 NOCACHE';
+    END IF;
+END;
+/
+
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO v_count
+      FROM USER_TRIGGERS
+     WHERE TRIGGER_NAME = 'TRG_WISHLIST_ID';
+
+    IF v_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE OR REPLACE TRIGGER TRG_WISHLIST_ID
+            BEFORE INSERT ON WISHLIST
+            FOR EACH ROW
+            WHEN (NEW.WISHLIST_ID IS NULL)
+            BEGIN
+                SELECT WISHLIST_SEQ.NEXTVAL
+                  INTO :NEW.WISHLIST_ID
+                  FROM DUAL;
+            END;';
+    END IF;
+END;
+/

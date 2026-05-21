@@ -1,5 +1,6 @@
 <?php
 include '../db.php';
+require_once '../product_discount_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: login.php');
@@ -109,7 +110,8 @@ if (!empty($guest_cart)) {
         if ($qty_int < 1) continue;
 
         // Fetch product info (skip unavailable products)
-        $stmt = oci_parse($conn, 'SELECT PRICE, STOCK_QUANTITY, MAX_ORDER FROM PRODUCT WHERE PRODUCT_ID = :p_pid');
+        $effective_price_sql = cfo_effective_price_sql('p');
+        $stmt = oci_parse($conn, "SELECT {$effective_price_sql} AS PRICE, STOCK_QUANTITY, MAX_ORDER FROM PRODUCT p WHERE PRODUCT_ID = :p_pid");
         oci_bind_by_name($stmt, ':p_pid', $product_id_str);
         if (!oci_execute($stmt)) { oci_free_statement($stmt); continue; }
         $prod = oci_fetch_assoc($stmt);
@@ -134,8 +136,9 @@ if (!empty($guest_cart)) {
             $new_qty_str = (string)min($new_qty, $stock);
             $item_id_str = (string)(int)$existing['CART_ITEM_ID'];
 
-            $stmt = oci_parse($conn, 'UPDATE CART_ITEM SET QUANTITY = :qty WHERE CART_ITEM_ID = :iid');
+            $stmt = oci_parse($conn, 'UPDATE CART_ITEM SET QUANTITY = :qty, PRICE = :p_price WHERE CART_ITEM_ID = :iid');
             oci_bind_by_name($stmt, ':qty', $new_qty_str);
+            oci_bind_by_name($stmt, ':p_price', $price);
             oci_bind_by_name($stmt, ':iid', $item_id_str);
             if (!oci_execute($stmt)) {
                 $e = oci_error($stmt);
@@ -156,6 +159,16 @@ if (!empty($guest_cart)) {
             if (!oci_execute($stmt)) {
                 $e = oci_error($stmt);
                 error_log('[LOGIN CART MERGE INSERT] product_id=' . $product_id_str . ': ' . ($e['message'] ?? 'unknown'));
+            }
+            oci_free_statement($stmt);
+
+            $stmt = oci_parse($conn, 'UPDATE CART_ITEM SET PRICE = :p_price WHERE CART_ID = :cid AND PRODUCT_ID = :pid');
+            oci_bind_by_name($stmt, ':p_price', $price);
+            oci_bind_by_name($stmt, ':cid', $cart_id);
+            oci_bind_by_name($stmt, ':pid', $product_id_str);
+            if (!oci_execute($stmt)) {
+                $e = oci_error($stmt);
+                error_log('[LOGIN CART MERGE DISCOUNT PRICE] product_id=' . $product_id_str . ': ' . ($e['message'] ?? 'unknown'));
             }
             oci_free_statement($stmt);
         }

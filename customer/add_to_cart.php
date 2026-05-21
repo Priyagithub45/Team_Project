@@ -1,6 +1,7 @@
 <?php
 include '../db.php';
 require_once '../csrf.php';
+require_once '../product_discount_helpers.php';
 
 $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
         && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -45,8 +46,9 @@ $is_logged_in = isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'cu
 
 // ── GUEST CART (session-based) ────────────────────────────────────────────────
 if (!$is_logged_in) {
-    $stmt = oci_parse($conn, "SELECT PRICE, STOCK_QUANTITY, MIN_ORDER, MAX_ORDER
-                               FROM PRODUCT
+    $effective_price_sql = cfo_effective_price_sql('p');
+    $stmt = oci_parse($conn, "SELECT {$effective_price_sql} AS PRICE, STOCK_QUANTITY, MIN_ORDER, MAX_ORDER
+                               FROM PRODUCT p
                                WHERE PRODUCT_ID = :pid");
     oci_bind_by_name($stmt, ':pid', $product_id_int);
     if (!oci_execute($stmt)) {
@@ -143,8 +145,9 @@ if (!oci_execute($stmt)) {
 $item_row = oci_fetch_assoc($stmt);
 oci_free_statement($stmt);
 
-// ── Step 4: fetch product price to satisfy TRG_CARTITEM_VALIDATE ─────────────
-$stmt = oci_parse($conn, 'SELECT price FROM PRODUCT WHERE product_id = :p_pid');
+// ── Step 4: fetch current sale price ─────────────────────────────────────────
+$effective_price_sql = cfo_effective_price_sql('p');
+$stmt = oci_parse($conn, "SELECT {$effective_price_sql} AS PRICE FROM PRODUCT p WHERE product_id = :p_pid");
 oci_bind_by_name($stmt, ':p_pid', $product_id);
 if (!oci_execute($stmt)) {
     $e = oci_error($stmt);
@@ -162,8 +165,9 @@ if ($item_row) {
     // ── Step 5a: increment quantity ───────────────────────────────────────────
     $new_qty = (string)((int)$item_row['QUANTITY'] + (int)$quantity);
     $item_id = (string)(int)$item_row['CART_ITEM_ID'];
-    $stmt = oci_parse($conn, 'UPDATE CART_ITEM SET quantity = :qty WHERE cart_item_id = :iid');
+    $stmt = oci_parse($conn, 'UPDATE CART_ITEM SET quantity = :qty, price = :p_price WHERE cart_item_id = :iid');
     oci_bind_by_name($stmt, ':qty', $new_qty);
+    oci_bind_by_name($stmt, ':p_price', $price);
     oci_bind_by_name($stmt, ':iid', $item_id);
     if (!oci_execute($stmt)) {
         $e = oci_error($stmt);
@@ -187,6 +191,17 @@ if ($item_row) {
             $msg = 'Product unavailable — trader has been suspended.';
         }
         cart_respond(false, $msg, $back);
+    }
+    oci_free_statement($stmt);
+
+    $stmt = oci_parse($conn, 'UPDATE CART_ITEM SET price = :p_price WHERE cart_id = :cid AND product_id = :pid');
+    oci_bind_by_name($stmt, ':p_price', $price);
+    oci_bind_by_name($stmt, ':cid', $cart_id);
+    oci_bind_by_name($stmt, ':pid', $product_id);
+    if (!oci_execute($stmt)) {
+        $e = oci_error($stmt);
+        oci_free_statement($stmt);
+        cart_respond(false, 'Could not apply product discount: ' . ($e['message'] ?? 'unknown'), $back);
     }
     oci_free_statement($stmt);
 }

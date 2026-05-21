@@ -3,6 +3,8 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+require_once __DIR__ . '/wishlist_helpers.php';
+
 $current_page = basename($_SERVER['PHP_SELF']);
 $page_title ??= 'Cleckhuddesfax Online Mart';
 $is_customer_logged_in = isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer';
@@ -12,6 +14,7 @@ $flash_error = $_SESSION['flash_error'] ?? '';
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 $cart_count = 0;
+$wishlist_count = 0;
 if ($is_customer_logged_in && isset($conn)) {
     $uid = (string)(int)$_SESSION['user_id'];
     $cc_stmt = oci_parse($conn,
@@ -28,6 +31,7 @@ if ($is_customer_logged_in && isset($conn)) {
         }
         oci_free_statement($cc_stmt);
     }
+    $wishlist_count = cfo_wishlist_count($conn, (int)$uid);
 } elseif (!$is_customer_logged_in && !empty($_SESSION['guest_cart'])) {
     $cart_count = (int)array_sum($_SESSION['guest_cart']);
 }
@@ -48,7 +52,7 @@ if ($is_customer_logged_in && isset($conn)) {
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="assets/css/style.css?v=2.2">
+    <link rel="stylesheet" href="assets/css/style.css?v=2.6">
 </head>
 <body>
 
@@ -118,6 +122,13 @@ if ($is_customer_logged_in && isset($conn)) {
 
             <!-- Icons Container -->
             <div class="header-icons">
+                <!-- Wishlist -->
+                <a href="wishlist.php" class="wishlist-icon" aria-label="My wishlist">
+                    <span class="material-icons">favorite</span>
+                    <span class="cart-badge wishlist-badge<?php echo $wishlist_count === 0 ? ' cart-badge-hidden' : ''; ?>" id="wishlist-badge">
+                        <?php echo $wishlist_count > 99 ? '99+' : max(0, $wishlist_count); ?>
+                    </span>
+                </a>
                 <!-- Profile -->
                 <a href="profile.php" class="profile-icon" aria-label="My profile">
                     <span class="material-icons">person</span>

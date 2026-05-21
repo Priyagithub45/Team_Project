@@ -1,6 +1,7 @@
 <?php
 include '../db.php';
 include 'auth_check.php';
+require_once '../product_discount_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: category.php');
@@ -22,8 +23,9 @@ if (!$product_id || $product_id < 1 || !$quantity || $quantity < 1) {
 $product_id = (string)(int)$product_id;
 $quantity = (int)$quantity;
 
-$stmt = oci_parse($conn, "SELECT PRODUCT_ID, PRODUCT_NAME, PRICE, STOCK_QUANTITY, MIN_ORDER, MAX_ORDER
-                          FROM PRODUCT
+$effective_price_sql = cfo_effective_price_sql('p');
+$stmt = oci_parse($conn, "SELECT PRODUCT_ID, PRODUCT_NAME, {$effective_price_sql} AS PRICE, STOCK_QUANTITY, MIN_ORDER, MAX_ORDER
+                          FROM PRODUCT p
                           WHERE PRODUCT_ID = :p_pid");
 oci_bind_by_name($stmt, ':p_pid', $product_id);
 if (!oci_execute($stmt)) {

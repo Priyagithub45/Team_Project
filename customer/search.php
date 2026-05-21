@@ -1,6 +1,7 @@
 <?php
 include '../db.php';
 include 'product_image_helper.php';
+require_once 'wishlist_helpers.php';
 
 $query = trim($_GET['q'] ?? '');
 $query = preg_replace('/\s+/', ' ', $query);
@@ -13,23 +14,34 @@ $best_matches = [];
 $related_matches = [];
 $extra_related = [];
 
-function render_product_card(array $product): void
+function render_product_card(array $product, array $wishlist_product_ids = [], string $return_to = ''): void
 {
     $name = $product['PRODUCT_NAME'] ?? '';
+    $has_discount = cfo_product_has_discount($product);
+    $product_id = (int)($product['PRODUCT_ID'] ?? 0);
     ?>
     <div class="product-list-card">
         <div class="product-list-img-box">
             <?php render_product_image($product); ?>
+            <?php cfo_render_wishlist_button($product_id, isset($wishlist_product_ids[$product_id]), $return_to, 'icon'); ?>
         </div>
         <div class="product-list-info">
             <span class="product-list-name"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></span>
-            <span class="product-list-price">GBP <?php echo number_format((float)($product['PRICE'] ?? 0), 2); ?></span>
+            <?php if ($has_discount): ?>
+                <span class="product-list-price has-discount">
+                    <small><?php echo cfo_format_discount_rate(cfo_discount_rate_from_row($product)); ?>% off</small>
+                    <strong>GBP <?php echo number_format(cfo_effective_price_from_row($product), 2); ?></strong>
+                    <span class="price-old">GBP <?php echo number_format((float)($product['PRICE'] ?? 0), 2); ?></span>
+                </span>
+            <?php else: ?>
+                <span class="product-list-price">GBP <?php echo number_format((float)($product['PRICE'] ?? 0), 2); ?></span>
+            <?php endif; ?>
         </div>
         <div class="search-card-meta">
             <span><?php echo htmlspecialchars($product['SHOP_NAME'] ?? 'Local trader', ENT_QUOTES, 'UTF-8'); ?></span>
             <span><?php echo htmlspecialchars($product['CATEGORY_NAME'] ?? 'Product', ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
-        <a href="product.php?id=<?php echo (int)$product['PRODUCT_ID']; ?>" class="btn-view-product">
+        <a href="product.php?id=<?php echo $product_id; ?>" class="btn-view-product">
             <span class="material-icons">visibility</span> VIEW PRODUCT
         </a>
     </div>
@@ -42,8 +54,10 @@ if ($query !== '') {
     $like = '%' . strtoupper($query) . '%';
     $image_select = product_image_select($conn, 'p');
     $active_filter = product_active_filter($conn, 'p');
+    $discount_select = cfo_discount_select_sql('p');
 
-    $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE, p.STOCK_QUANTITY
+    $sql = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE
+                   {$discount_select}, p.STOCK_QUANTITY
                    {$image_select},
                    s.SHOP_ID, s.SHOP_NAME,
                    c.CATEGORY_ID, c.CATEGORY_NAME,
@@ -101,7 +115,8 @@ if ($query !== '') {
         $seed_shop_id = (string)(int)$seed['SHOP_ID'];
         $seed_product_id = (string)(int)$seed['PRODUCT_ID'];
 
-        $sql_related = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE, p.STOCK_QUANTITY
+        $sql_related = "SELECT p.PRODUCT_ID, p.PRODUCT_NAME, p.DESCRIPTION, p.PRICE
+                               {$discount_select}, p.STOCK_QUANTITY
                                {$image_select},
                                s.SHOP_ID, s.SHOP_NAME,
                                c.CATEGORY_ID, c.CATEGORY_NAME,
@@ -144,6 +159,12 @@ if (empty($best_matches) && !empty($related_matches)) {
 }
 
 $related_products = array_merge($related_matches, $extra_related);
+$wishlist_seed_products = array_merge($best_matches, $related_products);
+$current_customer_id = (isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer')
+    ? (int)$_SESSION['user_id']
+    : 0;
+$wishlist_product_ids = cfo_wishlist_product_ids($conn, $current_customer_id, array_column($wishlist_seed_products, 'PRODUCT_ID'));
+$wishlist_return_to = cfo_wishlist_current_url('search.php');
 
 include 'header.php';
 ?>
@@ -205,7 +226,7 @@ include 'header.php';
             </div>
             <div class="product-list-grid search-results-grid">
                 <?php foreach ($best_matches as $product): ?>
-                    <?php render_product_card($product); ?>
+                    <?php render_product_card($product, $wishlist_product_ids, $wishlist_return_to); ?>
                 <?php endforeach; ?>
             </div>
 
@@ -216,7 +237,7 @@ include 'header.php';
                 </div>
                 <div class="product-list-grid search-results-grid">
                     <?php foreach ($related_products as $product): ?>
-                        <?php render_product_card($product); ?>
+                        <?php render_product_card($product, $wishlist_product_ids, $wishlist_return_to); ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>

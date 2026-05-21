@@ -1,6 +1,7 @@
 <?php
 include '../db.php';
 require_once '../csrf.php';
+require_once '../product_discount_helpers.php';
 
 header('Content-Type: application/json');
 
@@ -27,7 +28,8 @@ if (isset($_POST['guest']) && $_POST['guest'] === '1') {
     $product_id = (string)(int)$item_id;
     $qty_int    = (int)$qty;
 
-    $stmt = oci_parse($conn, 'SELECT PRICE, STOCK_QUANTITY, MAX_ORDER FROM PRODUCT WHERE PRODUCT_ID = :p_pid');
+    $effective_price_sql = cfo_effective_price_sql('p');
+    $stmt = oci_parse($conn, "SELECT {$effective_price_sql} AS PRICE, STOCK_QUANTITY, MAX_ORDER FROM PRODUCT p WHERE PRODUCT_ID = :p_pid");
     oci_bind_by_name($stmt, ':p_pid', $product_id);
     if (!oci_execute($stmt)) {
         oci_free_statement($stmt);
@@ -86,7 +88,8 @@ $user_id = (string)(int)$_SESSION['user_id'];
 $item_id = (string)(int)$item_id;
 $qty     = (string)(int)$qty;
 
-$sql = "SELECT ci.CART_ITEM_ID, ci.PRICE, p.STOCK_QUANTITY
+$effective_price_sql = cfo_effective_price_sql('p');
+$sql = "SELECT ci.CART_ITEM_ID, {$effective_price_sql} AS PRICE, p.STOCK_QUANTITY
         FROM CART_ITEM ci
         JOIN CART c    ON ci.CART_ID    = c.CART_ID
         JOIN PRODUCT p ON ci.PRODUCT_ID = p.PRODUCT_ID
@@ -129,8 +132,9 @@ if ($qty_int > $stock) {
     exit;
 }
 
-$upd = oci_parse($conn, 'UPDATE CART_ITEM SET QUANTITY = :p_qty WHERE CART_ITEM_ID = :p_iid');
+$upd = oci_parse($conn, 'UPDATE CART_ITEM SET QUANTITY = :p_qty, PRICE = :p_price WHERE CART_ITEM_ID = :p_iid');
 oci_bind_by_name($upd, ':p_qty', $qty);
+oci_bind_by_name($upd, ':p_price', $price);
 oci_bind_by_name($upd, ':p_iid', $item_id);
 
 if (!oci_execute($upd)) {

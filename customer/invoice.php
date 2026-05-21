@@ -121,10 +121,12 @@ $payment_amount = (float)($order['PAYMENT_AMOUNT'] ?? $invoice_total);
 $payment_method = $order['METHOD_NAME'] ?: 'PayPal Sandbox / On collection';
 $payment_status = $order['PAYMENT_STATUS'] ?: 'Pending';
 $order_status = $order['STATUS'] ?: 'Pending';
+$is_paid = strtoupper(trim((string)$payment_status)) === 'PAID';
 
 $order_date = $order['ORDER_DATE'] ? date('F j, Y', strtotime($order['ORDER_DATE'])) : 'N/A';
-$payment_date = $order['PAYMENT_DATE'] ? date('F j, Y, g:i A', strtotime($order['PAYMENT_DATE'])) : 'N/A';
+$payment_date = ($is_paid && $order['PAYMENT_DATE']) ? date('F j, Y, g:i A', strtotime($order['PAYMENT_DATE'])) : 'After collection';
 $collection_date = $order['COLLECTION_DATE'] ? date('l, d M Y', strtotime(substr($order['COLLECTION_DATE'], 0, 10))) : 'N/A';
+$total_label = $is_paid ? 'TOTAL PAID:' : 'TOTAL DUE:';
 
 $page_title = 'Invoice #' . $order_id . ' - Cleckhuddesfax Online Mart';
 include 'header.php';
@@ -219,7 +221,7 @@ include 'header.php';
                     <span>GBP 0.00</span>
                 </div>
                 <div class="invoice-total-row grand-total-row">
-                    <span>TOTAL PAID:</span>
+                    <span><?php echo htmlspecialchars($total_label); ?></span>
                     <span>GBP <?php echo number_format($invoice_total, 2); ?></span>
                 </div>
             </div>

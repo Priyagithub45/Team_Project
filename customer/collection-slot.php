@@ -5,6 +5,7 @@ require_once 'collection_slot_rules.php';
 
 $allowed_slot_rules_sql = collection_slot_allowed_sql('cs');
 $slot_order_sql = collection_slot_order_sql('cs');
+$visible_collection_day_limit = 3;
 
 // Handle slot selection POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -61,12 +62,15 @@ $sql = "SELECT SLOT_ID, COLLECTION_DATE, COLLECTION_TIME, LOCATION,
 $stmt = oci_parse($conn, $sql);
 oci_execute($stmt);
 
-// Group by date
+// Group by date, keeping only the nearest eligible collection days.
 $by_date = [];
 while ($row = oci_fetch_assoc($stmt)) {
     // COLLECTION_DATE comes as 'YYYY-MM-DD HH24:MI:SS' due to NLS_DATE_FORMAT
     $date_key = substr($row['COLLECTION_DATE'], 0, 10); // 'YYYY-MM-DD'
     if (!isset($by_date[$date_key])) {
+        if (count($by_date) >= $visible_collection_day_limit) {
+            break;
+        }
         $by_date[$date_key] = [];
     }
     $by_date[$date_key][] = $row;
@@ -114,7 +118,7 @@ function slot_time_label(string $t): string {
     <div class="container">
         <div class="slot-header">
             <h1>SELECT COLLECTION SLOT</h1>
-            <p class="slot-subtitle">Choose one collection slot before payment. Collection is available only on Wednesday, Thursday, and Friday at 10:00-13:00, 13:00-16:00, or 16:00-19:00. Each slot accepts 20 orders and must start at least 24 hours after you order.</p>
+            <p class="slot-subtitle">Choose one collection slot before payment. We show the next three eligible collection days only. Collection is available on Wednesday, Thursday, and Friday at 10:00-13:00, 13:00-16:00, or 16:00-19:00, and each slot must start at least 24 hours after you order.</p>
         </div>
 
         <?php if ($slot_error): ?>
