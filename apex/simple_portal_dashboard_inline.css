@@ -1,0 +1,235 @@
+/* ============================================================
+   CLECKHUDDESFAX - Simple Portal Dashboard CSS
+   Paste into Oracle APEX Page > CSS > Inline.
+   ============================================================ */
+
+html,
+body,
+.t-PageBody,
+.t-Body,
+.t-Body-main,
+.t-Body-content,
+.t-Body-contentInner,
+.t-Body-title,
+.t-BreadcrumbRegion,
+.t-HeroRegion,
+.t-HeroRegion-wrap,
+.t-Region,
+.t-Region-header,
+.t-Region-bodyWrap,
+.t-Region-body {
+  background: #081525 !important;
+}
+
+.t-Body-contentInner {
+  padding: 24px 28px !important;
+}
+
+.t-HeroRegion,
+.t-BreadcrumbRegion {
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: none !important;
+}
+
+.t-HeroRegion-title,
+.t-BreadcrumbRegion-title,
+.t-Region-title {
+  color: #F8FAFC !important;
+}
+
+.t-HeroRegion-col--content,
+.t-HeroRegion-icon {
+  color: #F8FAFC !important;
+}
+
+.t-Region {
+  border-color: rgba(255,255,255,0.08) !important;
+  box-shadow: none !important;
+}
+
+.t-Region-header {
+  border-bottom-color: rgba(255,255,255,0.08) !important;
+}
+
+.t-Body-actions,
+.t-Body-side {
+  background: #081525 !important;
+}
+
+.chd-simple-db,
+.chd-simple-db * {
+  box-sizing: border-box;
+}
+
+.chd-simple-db {
+  width: 100%;
+  border-radius: 14px;
+  padding: 28px;
+  color: #E8EEF7;
+  background:
+    linear-gradient(135deg, rgba(18, 35, 58, 0.98), rgba(10, 22, 38, 0.98)),
+    #0B1829;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.18);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.chd-simple-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.chd-simple-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 11px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(96,165,250,0.35);
+  color: #93C5FD;
+  background: rgba(96,165,250,0.10);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.chd-simple-hero h1 {
+  margin: 0;
+  color: #FFFFFF;
+  font-size: 30px;
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.chd-simple-hero p {
+  max-width: 620px;
+  margin: 10px 0 0;
+  color: rgba(232,238,247,0.68);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.chd-simple-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(52,211,153,0.10);
+  border: 1px solid rgba(52,211,153,0.22);
+  color: #6EE7B7;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chd-simple-state span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34D399;
+  box-shadow: 0 0 0 4px rgba(52,211,153,0.12);
+}
+
+.chd-simple-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.chd-simple-card {
+  min-height: 150px;
+  padding: 20px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.chd-simple-card-kicker {
+  margin-bottom: 20px;
+  color: #93C5FD;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chd-simple-card h2 {
+  margin: 0;
+  color: #FFFFFF;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.chd-simple-card p {
+  margin: 8px 0 0;
+  color: rgba(232,238,247,0.62);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.chd-simple-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: rgba(11,24,41,0.72);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.chd-simple-note strong {
+  display: block;
+  color: #FFFFFF;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.chd-simple-note p {
+  margin: 0;
+  color: rgba(232,238,247,0.62);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.chd-simple-date {
+  flex: 0 0 auto;
+  color: rgba(232,238,247,0.48);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .chd-simple-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .chd-simple-db {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .chd-simple-hero,
+  .chd-simple-note {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chd-simple-hero h1 {
+    font-size: 25px;
+  }
+}

@@ -1,0 +1,452 @@
+/* ============================================================
+   CLECKHUDDESFAX - Admin Dashboard CSS
+   Paste into Oracle APEX Page > CSS > Inline.
+   All classes are prefixed "chd-" to avoid APEX theme conflicts.
+   ============================================================ */
+
+.chd-db,
+.chd-db * {
+  box-sizing: border-box;
+}
+
+.chd-db {
+  background: #0B1829;
+  padding: 28px 32px;
+  border-radius: 12px;
+  font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #E2EAF4;
+  width: 100%;
+  overflow: hidden;
+}
+
+.chd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.chd-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #E2EAF4;
+  letter-spacing: 0;
+}
+
+.chd-sub {
+  font-size: 12px;
+  color: rgba(226,234,244,0.52);
+  margin-top: 4px;
+}
+
+.chd-meta {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 12px;
+  color: rgba(226,234,244,0.55);
+}
+
+.chd-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3B82F6;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.chd-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.chd-kpi,
+.chd-panel {
+  background: #112240;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.16);
+}
+
+.chd-kpi {
+  border-radius: 10px;
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.chd-kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226,234,244,0.52);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.chd-kpi-label i {
+  font-size: 15px;
+}
+
+.chd-kpi-val {
+  font-size: 30px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.chd-kpi-change {
+  font-size: 11px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chd-up { color: #34D399; }
+.chd-dn { color: #F87171; }
+.chd-kpi-blue .chd-kpi-label i { color: #60A5FA; }
+.chd-kpi-teal .chd-kpi-label i { color: #34D399; }
+.chd-kpi-amber .chd-kpi-label i { color: #FBBF24; }
+.chd-kpi-red .chd-kpi-label i { color: #F87171; }
+
+.chd-panel {
+  border-radius: 10px;
+  padding: 20px 22px;
+  min-width: 0;
+}
+
+.chd-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #B8C8DC;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chd-panel-title i {
+  font-size: 16px;
+  color: #60A5FA;
+}
+
+.chd-mid-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.chd-cat-list,
+.chd-trader-list,
+.chd-act-list,
+.chd-sys-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.chd-cat-list {
+  gap: 10px;
+}
+
+.chd-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.chd-cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chd-cat-name {
+  font-size: 13px;
+  color: #B8C8DC;
+  flex: 1;
+  min-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chd-cat-bar-wrap {
+  flex: 2;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+  min-width: 90px;
+}
+
+.chd-cat-bar {
+  height: 6px;
+  border-radius: 4px;
+}
+
+.chd-cat-count {
+  font-size: 12px;
+  color: rgba(226,234,244,0.56);
+  min-width: 34px;
+  text-align: right;
+}
+
+.chd-trader-list {
+  gap: 2px;
+}
+
+.chd-trader-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.chd-trader-row:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.chd-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1E3A5F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #60A5FA;
+  flex-shrink: 0;
+}
+
+.chd-trader-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.chd-trader-name {
+  font-size: 13px;
+  color: #D8E4F2;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chd-trader-cat {
+  font-size: 11px;
+  color: rgba(226,234,244,0.44);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chd-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chd-badge-active {
+  background: rgba(52,211,153,0.12);
+  color: #34D399;
+}
+
+.chd-badge-new {
+  background: rgba(96,165,250,0.12);
+  color: #60A5FA;
+}
+
+.chd-bottom-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.chd-act-list {
+  gap: 0;
+}
+
+.chd-act-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.chd-act-row:last-child {
+  border-bottom: none;
+}
+
+.chd-act-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.chd-act-icon i {
+  font-size: 14px;
+}
+
+.chd-ai-blue { background: rgba(96,165,250,0.12); color: #60A5FA; }
+.chd-ai-green { background: rgba(52,211,153,0.12); color: #34D399; }
+.chd-ai-amber { background: rgba(251,191,36,0.12); color: #FBBF24; }
+.chd-ai-red { background: rgba(248,113,113,0.12); color: #F87171; }
+
+.chd-act-text {
+  font-size: 12px;
+  color: #B8C8DC;
+  line-height: 1.45;
+  flex: 1;
+  min-width: 0;
+}
+
+.chd-act-time {
+  font-size: 11px;
+  color: rgba(226,234,244,0.36);
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.chd-slot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.chd-slot {
+  border-radius: 7px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.chd-slot-time {
+  font-size: 11px;
+  color: rgba(226,234,244,0.52);
+  margin-bottom: 4px;
+}
+
+.chd-slot-status {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chd-slot-open { background: rgba(52,211,153,0.06); }
+.chd-slot-taken { background: rgba(248,113,113,0.06); }
+.chd-slot-few { background: rgba(251,191,36,0.06); }
+.chd-s-open { color: #34D399; }
+.chd-s-taken { color: #F87171; }
+.chd-s-few { color: #FBBF24; }
+
+.chd-sys-list {
+  gap: 10px;
+}
+
+.chd-sys-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.chd-sys-label {
+  font-size: 12px;
+  color: rgba(226,234,244,0.56);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.chd-sys-label i {
+  font-size: 14px;
+  color: #60A5FA;
+}
+
+.chd-sys-val {
+  font-size: 12px;
+  font-weight: 800;
+  color: #B8C8DC;
+  text-align: right;
+}
+
+.chd-ok { color: #34D399 !important; }
+.chd-warn { color: #FBBF24 !important; }
+
+.chd-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+}
+
+.chd-empty {
+  color: rgba(226,234,244,0.48);
+  font-size: 12px;
+  padding: 12px 0;
+}
+
+@media (max-width: 1100px) {
+  .chd-kpi-row,
+  .chd-bottom-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chd-mid-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .chd-db {
+    padding: 20px 16px;
+    border-radius: 10px;
+  }
+
+  .chd-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chd-kpi-row,
+  .chd-bottom-row,
+  .chd-slot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chd-cat-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .chd-cat-name {
+    min-width: calc(100% - 60px);
+  }
+
+  .chd-cat-bar-wrap {
+    flex-basis: calc(100% - 50px);
+    margin-left: 20px;
+  }
+}
